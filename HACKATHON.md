@@ -64,10 +64,22 @@ network, Ethereum Sepolia, and replaces the ternary pattern with explicit, fail-
 6. **Frontend:** an Ethereum Sepolia chain entry, chain-aware explorer links
    (`sepolia.etherscan.io`), a wagmi transport (`src/lib/chain-context.tsx`, `src/lib/wagmi.ts`).
 7. These docs (`HACKATHON.md`, video script, submission form, `docs/integrate/ethereum-sepolia.md`).
+8. **Local dev shims + demo launcher** (`scripts/dev-hypersync-shim.ts`, `scripts/dev-upstash-shim.ts`,
+   `scripts/demo-ethonline.sh`, `scripts/x402-test-agent.ts`). Envio withdrew the JSON-RPC
+   ("HyperRPC") product from our token this month, which also broke the deployed facilitator's
+   pool reads; the native HyperSync query API still works. The shim translates `eth_getLogs`
+   into native queries behind the new `HYPERSYNC_URL` override, and an in-memory Upstash-REST
+   store stands in for Redis, so the **full private x402 agent flow runs on a laptop**: 402 →
+   deposit → OFAC screening + ASP root update → verify → Groth16 settle → data, then a second
+   payment from the change note. Proven live on Base Sepolia during the event: deposit
+   `0xc33f561b…379c`, settle #1 `0xb33ae9d0…3aa6` (8.8 s), settle #2 `0x721e7a56…599e` (8.6 s),
+   seller delivered both. The harness also moved to the designed depositor path
+   (`POST /api/deposits/confirm {txHash}`) and advances the shared indexer after each leaf.
 
 Commits: `d5fe4ea` (chain config + `ETH_SEPOLIA_STACK`), `fc8c5e4` (facilitator network registry),
-`55f3fbd` (HyperSync helper, RPC fallback, USDC domain, `externalAsp` guards), `4cbbe59` (docs),
-plus the commit that fills these references.
+`55f3fbd` (HyperSync helper, RPC fallback, USDC domain, `externalAsp` guards), `4cbbe59` + `3d63f29`
+(docs), `7b524dc` (shims + agent harness), `37b49a6` (demo launcher), plus the commit that updates
+these references.
 
 ## What works now on Ethereum Sepolia
 
@@ -77,7 +89,11 @@ plus the commit that fills these references.
   `pricing.networks["eip155:11155111"]` entry. `supported[]` stays empty until the same
   production-readiness gates that govern Base (shared root-verified indexer + configured RPC)
   pass — the gate is unchanged, not bypassed.
-- `GET /api/deposits/events` and the anonymity-set read index 0xbow's pool via the RPC fallback.
+- `GET /api/deposits/events` and the anonymity-set read index 0xbow's pool: 175 deposits / 286 leaves /
+  111 withdrawals in ~3.5 s through the HyperSync shim (`bash scripts/demo-ethonline.sh eth`). The
+  chunked public-RPC fallback also returns 200 but publicnode's Sepolia node silently drops older
+  logs (80 deposits) — a finding worth stating: never trust a public RPC's `eth_getLogs` for
+  history without a root check, which is exactly what the withdraw path does.
 - The facilitator's verify path accepts `eip155:11155111` payment payloads.
 - The app renders an Ethereum Sepolia chain entry.
 
@@ -90,6 +106,16 @@ plus the commit that fills these references.
   0xbow's existing pool state rather than adding to it.
 
 ## How to run it
+
+**Full private x402 agent flow, Base Sepolia (what the video shows first):**
+
+```bash
+yarn
+bash scripts/demo-ethonline.sh base     # shims + facilitator :3009 + seller :4020, warms indexer + ASP
+npm run test:x402-agent                 # 402 → deposit → screen → verify → ZK settle → data (×2)
+```
+
+**Ethereum Sepolia read path:**
 
 ```bash
 yarn
@@ -128,7 +154,8 @@ against Primev's `facilitator.primev.xyz`, the only live `eip155:1` x402 facilit
   tonight; the write path is gated behind a named blocker (postman access), not silently broken.
 - **Usability (UI/UX/DX)** — one env var (`NEXT_PUBLIC_NETWORK=eth-sepolia`) switches the whole
   stack; `docs/integrate/ethereum-sepolia.md` gives exact commands and the address table.
-- **WOW factor** — a live private payment on Base (`/app#try`), then the same facilitator talking
+- **WOW factor** — a live private agent payment on Base (two Groth16 settlements from one deposit, ~40 s on
+  camera), then the same facilitator talking
   to a Vitalik-co-authored pool on Ethereum Sepolia it did not deploy itself.
 
 ## License / attribution
