@@ -1,0 +1,24 @@
+{
+  "$schema": "./seed-pools.config.schema.json",
+  "_REPLACE_BEFORE_RUNNING": "After deploying staging stack, fill in: treasury, pools[0].address, pools[0].asset, entrypoint. The four PLACEHOLDER zeroes will cause seed-pools.ts to refuse to start until replaced.",
+  "_doc": "Staging seed config — targets the staging stack deployed via DeployStaging.s.sol with MockUSDC instead of real USDC. Use to dry-run the seed pipeline against a real Sepolia chain without spending real USDC. Mint MockUSDC to your treasury via `cast send STAGING_USDC 'mint(address,uint256)' TREASURY 100000000000`. 15 deposits across 3 denoms = $800 MockUSDC — half of Phase 0 for faster iteration. depositGapMs=2000 (vs Phase 0's 3000) since staging is for iteration, not production observability.",
+  "treasury": "0x0000000000000000000000000000000000000000",
+  "pools": [
+    {
+      "address": "0x0000000000000000000000000000000000000000",
+      "asset": "0x0000000000000000000000000000000000000000",
+      "assetDecimals": 6,
+      "label": "MockUSDC (staging only — no real value)",
+      "denomCount": {
+        "10": 5,
+        "50": 5,
+        "100": 5
+      }
+    }
+  ],
+  "lockUntil": "2027-12-01T00:00:00Z",
+  "encryptedNotesPath": "data/seed-notes.staging.encrypted.json",
+  "entrypoint": "0x0000000000000000000000000000000000000000",
+  "chainId": 84532,
+  "depositGapMs": 2000
+}

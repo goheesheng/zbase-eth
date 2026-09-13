@@ -1,0 +1,14 @@
+{
+  "note": "L2 risk overlay for src/lib/ofac-screening.ts — zBase's curated blocklist, BROADER than the live OFAC SDN list (L1). Replicates 0xbow's post-delisting policy of continuing to block known mixers + hack addresses even when OFAC no longer requires it (delisting removes the prohibition, not the risk). HAND-CURATED, not comprehensive: this is editorial policy, not a claim of full coverage. Each address is blocked from the ASP approved-set; funds are not seized (ragequit reclaim exists). Add addresses under the matching reason code.",
+  "policy-mixer": [
+    "0x8589427373d6d84e98730d7795d8f6f8731fda16",
+    "0x722122df12d4e14e13ac3b6895a86e84145b6967",
+    "0x910cbd523d972eb0a6f4cae4618ad62622b39dbf",
+    "0xa160cdab225685da1d56aa342ad8841c3b53f291",
+    "0xd4b88df4d29f5cedd6857912842cff3b20c8cfa3"
+  ],
+  "policy-hack": [
+    "0x098b716b8aaf21512996dc57eb0615e2383e2f96"
+  ],
+  "operator-pin": []
+}

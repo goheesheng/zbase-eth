@@ -1,0 +1,114 @@
+# zBase — call any x402 provider PRIVATELY (paste this into your agent)
+
+You are an AI agent that needs to pay x402 providers on Base without revealing
+which wallet you are. zBase is a privacy facilitator: you deposit USDC into a
+shared ZK pool once, then pay any provider FROM the pool. The provider's payment
+tx has NO on-chain link to your deposit wallet. This is Vitalik Buterin's Privacy
+Pools design (compliant, not a mixer) — only clean (ASP-approved) deposits can spend.
+
+## What it does / does NOT do (be honest with your user)
+- HIDES: the link between your wallet and the provider you pay (payer↔payee unlinkability).
+- Does NOT hide: the AMOUNT (deposit/withdraw values are public on-chain), or
+  timing if you deposit and pay in the same quiet window.
+- Privacy STRENGTH = how many other deposits are in the pool (the anonymity set).
+  A near-empty pool gives weak privacy. Check anonymitySet before relying on it.
+- Early mainnet: internally reviewed, NOT externally audited. Size risk accordingly.
+
+## Endpoints
+- Mainnet (real USDC): `https://zbase.app`   network `eip155:8453`
+- Testnet (free, test first!): `https://testnet.zbase.app`   network `eip155:84532`
+
+Discover live config anytime:
+  GET https://zbase.app/api/facilitator/supported   → network, USDC, contracts
+  GET https://zbase.app/api/health                  → anonymitySet (current pool size, a NUMBER)
+  GET https://zbase.app/api/anonymity-set           → totalDeposits + set details
+CHECK anonymitySet BEFORE relying on privacy — if it's 0 or tiny, you have little
+to hide among (the mainnet pool is bootstrapping and may be near-empty at launch).
+
+## Base mainnet contracts (chainId 8453)
+- USDC:       0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913
+- Entrypoint: 0x275fAA86e2E316Abe46807453c1D95f101d36431   (approve USDC + deposit here)
+- PrivacyPool:0x46753CED1E87871eA1aaF24Aed47DFA2D95855Dd
+- deploy block: 48571589
+Amounts are atomic USDC (6 decimals): 1 USDC = "1000000".
+
+## The private-payment flow (3 steps)
+
+### Step 1 — deposit ONCE into the pool (on-chain, your wallet)
+Generate a secret note, then send USDC to the Entrypoint. Keep the secrets.
+
+Using the SDK (`npm i @zbase-protocol/core`):
+```ts
+import { createFacilitatorClient } from "@zbase-protocol/core";
+const zbase = createFacilitatorClient({ baseUrl: "https://zbase.app", network: "eip155:8453" });
+
+const cfg  = zbase.getDepositConfig();          // mainnet USDC + entrypoint + pool
+const prep = zbase.prepareDeposit("2000000");   // 2 USDC note; KEEP prep.secrets
+
+// On-chain (viem/ethers), from YOUR wallet:
+//   1. USDC.approve(cfg.entrypoint, amount)
+//   2. Entrypoint.deposit(cfg.asset, amount, prep.precommitment)  // gas ~1,000,000
+// Then read the PrivacyPool `Deposited` event from the receipt (NOT the Entrypoint
+// event — it lacks label). It gives you { value (post-fee), label, commitment }.
+// Your full deposit note = { ...prep.secrets, value, label, commitment }.
+// (Deposited event topic: 0xe3b53cd1a44fbf11535e145d80b8ef1ed6d57a73bf5daa7e939b6b01657d6549)
+```
+
+### Step 2 — verify a payment can settle (optional but recommended)
+```ts
+const check = await zbase.verifyPayment({
+  payTo: PROVIDER_ADDRESS, amountAtomic: "500000", deposit: myNote,
+});
+// check.valid === true, check.privacy.anonymitySet tells you how private you are.
+```
+
+### Step 3 — pay the provider PRIVATELY
+```ts
+const res = await zbase.settlePrivately({
+  payTo: PROVIDER_ADDRESS,   // the x402 provider's payTo address
+  amountAtomic: "500000",    // 0.5 USDC
+  deposit: myNote,
+});
+// res.settled === true, res.txHash = the on-chain payment.
+// res.nextDeposit = your CHANGE note (reuse it for the next payment).
+```
+The pool pays the provider. On-chain, the provider receives USDC FROM THE POOL,
+not from your wallet. There is no tx linking you to them.
+
+## Pure HTTP (no SDK) — for the settle call
+```bash
+curl -X POST https://zbase.app/api/facilitator/settle \
+  -H "content-type: application/json" \
+  -d '{
+    "paymentDetails": {
+      "scheme": "exact",
+      "networkId": "eip155:8453",
+      "payTo": "0xPROVIDER_ADDRESS",
+      "maxAmountRequired": "500000"
+    },
+    "zbaseDeposit": { "nullifier":"...", "secret":"...", "value":"...", "label":"...", "commitment":"..." }
+  }'
+```
+
+## How this plugs into a normal x402 call
+1. You hit an x402 provider; it returns HTTP 402 with a payment requirement
+   (scheme "exact", network eip155:8453, payTo, maxAmountRequired).
+2. Instead of paying from your wallet directly, call zBase `settlePrivately`
+   with that provider's payTo + amount, using your pool deposit.
+3. zBase settles the payment from the pool; you get res.txHash.
+4. Retry the provider request with the payment proof. The provider is paid, but
+   cannot see which wallet funded it.
+
+## SECURITY (do not skip)
+- `settlePrivately` sends your note SPEND SECRETS to the facilitator (server-side
+  proving today). ONLY ever point baseUrl at https://zbase.app (or a zBase
+  deployment you trust). A malicious baseUrl can steal your funds. The SDK
+  rejects insecure http:// URLs by default.
+- KEEP your deposit note ({nullifier, secret, ...}) safe — it IS the money. Lose
+  it = funds stuck in the pool.
+- TEST on https://testnet.zbase.app (eip155:84532, free Sepolia USDC from
+  faucet.circle.com) before spending real USDC on mainnet.
+
+## One-line summary for your user
+"I'll pay <provider> $X via zBase's privacy pool so the payment can't be traced
+back to your wallet. First deposit funds once, then each payment is unlinkable."

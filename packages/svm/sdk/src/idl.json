@@ -1,0 +1,1141 @@
+{
+  "address": "7qGhxY9Dc9reSNbNHdX1Rtf7hq7D45zdnV1UY3rpt3eM",
+  "metadata": {
+    "name": "zx402_privacy_pool",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "deposit",
+      "docs": [
+        "Deposit USDC into the privacy pool.",
+        "",
+        "`precommitment` = Poseidon(2)([nullifier, secret]) is computed off-chain",
+        "by the depositor. The contract derives `label = keccak256(scope, nonce)",
+        "% SNARK_FIELD` on-chain (so a depositor cannot lie about which label",
+        "their deposit gets), computes `commitment = Poseidon(3)([value, label,",
+        "precommitment])`, and inserts the commitment into the LeanIMT."
+      ],
+      "discriminator": [
+        242,
+        35,
+        198,
+        137,
+        82,
+        225,
+        242,
+        182
+      ],
+      "accounts": [
+        {
+          "name": "pool_state",
+          "writable": true
+        },
+        {
+          "name": "deposit_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  100,
+                  101,
+                  112,
+                  111,
+                  115,
+                  105,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool_state"
+              },
+              {
+                "kind": "account",
+                "path": "pool_state.deposit_count",
+                "account": "PoolState"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "depositor_token_account",
+          "writable": true
+        },
+        {
+          "name": "depositor",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "precommitment",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "initialize",
+      "docs": [
+        "Initialize the privacy pool with owner, postman, and USDC mint."
+      ],
+      "discriminator": [
+        175,
+        175,
+        109,
+        31,
+        13,
+        152,
+        155,
+        237
+      ],
+      "accounts": [
+        {
+          "name": "pool_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_mint"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool_state"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_mint"
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "postman"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "vetting_fee_bps",
+          "type": "u64"
+        },
+        {
+          "name": "max_relay_fee_bps",
+          "type": "u64"
+        },
+        {
+          "name": "minimum_deposit",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "register_agent",
+      "docs": [
+        "Register an AI agent with identity and permissions. (Unchanged in V1.)"
+      ],
+      "discriminator": [
+        135,
+        157,
+        66,
+        195,
+        2,
+        113,
+        175,
+        30
+      ],
+      "accounts": [
+        {
+          "name": "agent_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  97,
+                  103,
+                  101,
+                  110,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "hot_key"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "hot_key"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "max_spend_per_tx",
+          "type": "u64"
+        },
+        {
+          "name": "max_spend_per_day",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "relay_withdrawal",
+      "docs": [
+        "Relay a withdrawal using a Groth16 ZK proof.",
+        "",
+        "The relayer (postman) supplies:",
+        "* `proof_a`, `proof_b`, `proof_c`: groth16-solana-formatted proof",
+        "bytes (proof_a is already negated and endian-swapped per the",
+        "groth16-solana convention; the SDK does this off-chain).",
+        "* `public_inputs`: the 8 publicSignals from snarkjs, in the order",
+        "[newCommitmentHash, existingNullifierHash, withdrawnValue,",
+        "stateRoot, stateTreeDepth, ASPRoot, ASPTreeDepth, context].",
+        "* `withdrawal_data`: the serialized recipient/feeRecipient/relayFeeBps",
+        "blob; only used to recompute `context` for binding.",
+        "",
+        "Note on chain compatibility: `context` on Solana is",
+        "`keccak256(pool_pda || withdrawal_data || scope) % SNARK_FIELD`,",
+        "which differs from the EVM `keccak256(abi.encode(Withdrawal{processooor,",
+        "data}, scope))`. A proof generated for one chain therefore cannot",
+        "settle on the other — by design — even though the underlying circuit",
+        "and trusted setup are shared. The SDK builds the appropriate `context`",
+        "per chain; depositors don't see this.",
+        "",
+        "The instruction enforces:",
+        "1. State root must match a known historical root.",
+        "2. ASP root must equal `pool.asp_root` (current). This is what makes",
+        "this a *compliant* privacy pool, not a mixer.",
+        "3. `context` must equal `keccak256(processooor || data || scope)",
+        "% SNARK_FIELD`. Binds the proof to this exact recipient + relay",
+        "fee, so a malicious relayer cannot rewrite the destination.",
+        "4. `withdrawnValue` from the public inputs must match the on-chain",
+        "`withdrawn_value` argument.",
+        "5. Nullifier must be unspent (PDA seed enforces uniqueness).",
+        "6. Groth16 proof must verify against the embedded `VERIFYING_KEY`."
+      ],
+      "discriminator": [
+        82,
+        107,
+        116,
+        206,
+        198,
+        253,
+        16,
+        16
+      ],
+      "accounts": [
+        {
+          "name": "pool_state",
+          "writable": true
+        },
+        {
+          "name": "nullifier_record",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  110,
+                  117,
+                  108,
+                  108,
+                  105,
+                  102,
+                  105,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pool_state"
+              },
+              {
+                "kind": "arg",
+                "path": "nullifier_hash"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "writable": true
+        },
+        {
+          "name": "recipient_token_account",
+          "writable": true
+        },
+        {
+          "name": "relayer_token_account",
+          "writable": true
+        },
+        {
+          "name": "relayer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "nullifier_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "recipient",
+          "type": "pubkey"
+        },
+        {
+          "name": "withdrawn_value",
+          "type": "u64"
+        },
+        {
+          "name": "relay_fee_bps",
+          "type": "u64"
+        },
+        {
+          "name": "withdrawal_data",
+          "type": "bytes"
+        },
+        {
+          "name": "proof_a",
+          "type": {
+            "array": [
+              "u8",
+              64
+            ]
+          }
+        },
+        {
+          "name": "proof_b",
+          "type": {
+            "array": [
+              "u8",
+              128
+            ]
+          }
+        },
+        {
+          "name": "proof_c",
+          "type": {
+            "array": [
+              "u8",
+              64
+            ]
+          }
+        },
+        {
+          "name": "public_inputs",
+          "type": {
+            "array": [
+              {
+                "array": [
+                  "u8",
+                  32
+                ]
+              },
+              8
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_paused",
+      "docs": [
+        "Pause/unpause the pool (owner only)."
+      ],
+      "discriminator": [
+        91,
+        60,
+        125,
+        192,
+        176,
+        225,
+        166,
+        218
+      ],
+      "accounts": [
+        {
+          "name": "pool_state",
+          "writable": true
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "paused",
+          "type": "bool"
+        }
+      ]
+    },
+    {
+      "name": "update_asp_root",
+      "docs": [
+        "Update the ASP (Association Set Provider) root. Postman-only."
+      ],
+      "discriminator": [
+        153,
+        165,
+        251,
+        139,
+        40,
+        73,
+        41,
+        184
+      ],
+      "accounts": [
+        {
+          "name": "pool_state",
+          "writable": true
+        },
+        {
+          "name": "postman",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_root",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "ipfs_cid",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "AgentRecord",
+      "discriminator": [
+        4,
+        201,
+        129,
+        70,
+        197,
+        134,
+        47,
+        169
+      ]
+    },
+    {
+      "name": "DepositRecord",
+      "discriminator": [
+        83,
+        232,
+        10,
+        31,
+        251,
+        49,
+        189,
+        167
+      ]
+    },
+    {
+      "name": "NullifierRecord",
+      "discriminator": [
+        56,
+        18,
+        57,
+        175,
+        69,
+        202,
+        189,
+        70
+      ]
+    },
+    {
+      "name": "PoolState",
+      "discriminator": [
+        247,
+        237,
+        227,
+        245,
+        215,
+        195,
+        222,
+        70
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AspRootUpdated",
+      "discriminator": [
+        4,
+        104,
+        47,
+        28,
+        43,
+        249,
+        229,
+        231
+      ]
+    },
+    {
+      "name": "DepositEvent",
+      "discriminator": [
+        120,
+        248,
+        61,
+        83,
+        31,
+        142,
+        107,
+        144
+      ]
+    },
+    {
+      "name": "WithdrawalEvent",
+      "discriminator": [
+        161,
+        53,
+        185,
+        18,
+        98,
+        254,
+        54,
+        165
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "PoolPaused",
+      "msg": "Pool is paused"
+    },
+    {
+      "code": 6001,
+      "name": "BelowMinimumDeposit",
+      "msg": "Deposit below minimum"
+    },
+    {
+      "code": 6002,
+      "name": "NullifierAlreadySpent",
+      "msg": "Nullifier already spent"
+    },
+    {
+      "code": 6003,
+      "name": "RelayFeeTooHigh",
+      "msg": "Relay fee exceeds maximum"
+    },
+    {
+      "code": 6004,
+      "name": "Unauthorized",
+      "msg": "Unauthorized"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidProof",
+      "msg": "Invalid proof"
+    },
+    {
+      "code": 6006,
+      "name": "SpendLimitExceeded",
+      "msg": "Agent spend limit exceeded"
+    },
+    {
+      "code": 6007,
+      "name": "UnknownStateRoot",
+      "msg": "State root not recognized by pool"
+    },
+    {
+      "code": 6008,
+      "name": "IncorrectAspRoot",
+      "msg": "ASP root in proof does not match pool ASP root"
+    },
+    {
+      "code": 6009,
+      "name": "ContextMismatch",
+      "msg": "Withdrawal context hash does not match"
+    },
+    {
+      "code": 6010,
+      "name": "WithdrawalDataMismatch",
+      "msg": "Withdrawal bytes do not match recipient, relay fee, and relayer"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidWithdrawalAmount",
+      "msg": "Withdrawn amount is invalid"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidTreeDepth",
+      "msg": "Tree depth exceeds maximum"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidVault",
+      "msg": "Vault account does not match the pool's vault PDA"
+    }
+  ],
+  "types": [
+    {
+      "name": "AgentRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "name",
+            "type": "string"
+          },
+          {
+            "name": "hot_key",
+            "type": "pubkey"
+          },
+          {
+            "name": "max_spend_per_tx",
+            "type": "u64"
+          },
+          {
+            "name": "max_spend_per_day",
+            "type": "u64"
+          },
+          {
+            "name": "total_spent",
+            "type": "u64"
+          },
+          {
+            "name": "daily_spent",
+            "type": "u64"
+          },
+          {
+            "name": "tx_count",
+            "type": "u64"
+          },
+          {
+            "name": "last_reset_day",
+            "type": "i64"
+          },
+          {
+            "name": "registered_at",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "AspRootUpdated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "ipfs_cid",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DepositEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "depositor",
+            "type": "pubkey"
+          },
+          {
+            "name": "commitment",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "label",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "value",
+            "type": "u64"
+          },
+          {
+            "name": "index",
+            "type": "u64"
+          },
+          {
+            "name": "new_root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "new_depth",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "DepositRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "depositor",
+            "type": "pubkey"
+          },
+          {
+            "name": "precommitment",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "commitment",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "label",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "index",
+            "type": "u64"
+          },
+          {
+            "name": "timestamp",
+            "type": "i64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "LeanImtFrontier",
+      "docs": [
+        "LeanIMT side-nodes (\"frontier\") storing the right-most node at every depth.",
+        "On insert, walk up from depth 0:",
+        "- if the leaf-index bit at this level is 0: this node has no right",
+        "sibling yet; record it in `side_nodes[level]` and stop hashing",
+        "(its parent equals itself).",
+        "- if the bit is 1: the left sibling lives in `side_nodes[level]`; the",
+        "parent is poseidon2(side_nodes[level], current_node), then continue.",
+        "The final \"current_node\" (after walking through all set bits) is the root.",
+        "",
+        "`current_depth` is the smallest depth such that `1 << current_depth >= size`.",
+        "It grows monotonically: when a deposit_count crosses 1, 2, 4, 8, ...,",
+        "the depth bumps by one. This matches @zk-kit/lean-imt's behavior."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "side_nodes",
+            "docs": [
+              "One stored side-node per level. Index = level (0 = leaf-row)."
+            ],
+            "type": {
+              "array": [
+                {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                },
+                32
+              ]
+            }
+          },
+          {
+            "name": "size",
+            "docs": [
+              "Number of leaves inserted so far. Doubles as the next leaf index."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "current_depth",
+            "docs": [
+              "`ceil(log2(max(size, 1)))`. Required as a public input in the circuit."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "NullifierRecord",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "nullifier_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "spent",
+            "type": "bool"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "postman",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "vault",
+            "type": "pubkey"
+          },
+          {
+            "name": "scope",
+            "docs": [
+              "32-byte BE field element. keccak256(pool_id || token_mint) % SNARK_FIELD."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "tree_root",
+            "docs": [
+              "Latest LeanIMT root."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "asp_root",
+            "docs": [
+              "Latest ASP root (set by postman)."
+            ],
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "deposit_count",
+            "docs": [
+              "Number of leaves inserted."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "vetting_fee_bps",
+            "type": "u64"
+          },
+          {
+            "name": "max_relay_fee_bps",
+            "type": "u64"
+          },
+          {
+            "name": "minimum_deposit",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "vault_bump",
+            "type": "u8"
+          },
+          {
+            "name": "paused",
+            "type": "bool"
+          },
+          {
+            "name": "frontier",
+            "docs": [
+              "LeanIMT side-nodes + size + depth. Recomputes the root on demand."
+            ],
+            "type": {
+              "defined": {
+                "name": "LeanImtFrontier"
+              }
+            }
+          },
+          {
+            "name": "known_state_roots",
+            "docs": [
+              "Ring buffer of recent state roots. A relayer can submit a proof",
+              "against any of these — required because deposits land between proof",
+              "generation and proof submission."
+            ],
+            "type": {
+              "array": [
+                {
+                  "array": [
+                    "u8",
+                    32
+                  ]
+                },
+                32
+              ]
+            }
+          },
+          {
+            "name": "known_state_roots_idx",
+            "docs": [
+              "Ring buffer write head."
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "WithdrawalEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "recipient",
+            "type": "pubkey"
+          },
+          {
+            "name": "nullifier_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "value",
+            "type": "u64"
+          },
+          {
+            "name": "relay_fee",
+            "type": "u64"
+          },
+          {
+            "name": "new_commitment",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "new_root",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

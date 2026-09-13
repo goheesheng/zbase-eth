@@ -1,0 +1,168 @@
+openapi: 3.1.0
+info:
+  title: zBase facilitator — public API
+  version: "1.0.0"
+  description: |
+    The **read-only, public** surface of the zBase facilitator. Every operation here is safe to
+    call from this playground — it moves no funds, needs no secrets, and mutates nothing. Click
+    **Send** to hit the live mainnet facilitator.
+
+    The money path (verify / settle / withdraw) is deliberately **not** in this interactive spec:
+    those endpoints require signed EIP-3009 payloads and single-use spend secrets and move real
+    USDC, so they are never firable from a public page. See the "Money endpoints" section on the
+    API page for their reference curl — and use the SDK, which builds the signatures for you.
+servers:
+  - url: https://zbase.app
+    description: Base mainnet facilitator (live)
+tags:
+  - name: Discovery
+    description: Capability, pricing, and live privacy/pilot status.
+  - name: Health
+    description: Liveness and readiness.
+  - name: Pool state
+    description: Read-only on-chain pool reads (anonymity set, events).
+  - name: Privacy
+    description: Free, redacted exposure preview for a public address.
+paths:
+  /api/facilitator/supported:
+    get:
+      tags: [Discovery]
+      summary: Facilitator capabilities + live privacy status
+      description: |
+        The single most useful public call. Returns what the facilitator supports (scheme, network,
+        asset), the **live anonymity set** and whether payments are crowd-private yet
+        (`pilot.private`, `privacy.anonymitySet` vs `minimumForPrivacy`), the active contract stack,
+        and endpoint URLs. No auth, no body.
+      operationId: getSupported
+      responses:
+        "200":
+          description: Capability + status document.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  x402Version: { type: integer, example: 2 }
+                  facilitator: { type: string, example: "zBase Privacy Facilitator" }
+                  status: { type: string, enum: [active, pilot, deployed-not-customer-ready], example: pilot }
+                  customerReady: { type: boolean, example: false }
+                  pilotReady: { type: boolean, example: true }
+                  supported:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        scheme: { type: string, example: exact }
+                        network: { type: string, example: "eip155:8453" }
+                        asset: { type: string, example: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" }
+                        symbol: { type: string, example: USDC }
+                        decimals: { type: integer, example: 6 }
+                  pilot:
+                    type: object
+                    properties:
+                      enabled: { type: boolean }
+                      private: { type: boolean, example: false }
+                      anonymitySet: { type: integer, example: 2 }
+                      minimumForPrivacy: { type: integer, example: 30 }
+                  privacy:
+                    type: object
+                    properties:
+                      anonymitySet: { type: integer, example: 2 }
+                      minimumCustomerAnonymitySet: { type: integer, example: 30 }
+                      method: { type: string, example: "Groth16 ZK-SNARK (Privacy Pools)" }
+                      compliance: { type: string, example: "Association Set Provider (ASP)" }
+                  contracts:
+                    type: object
+                    properties:
+                      entrypoint: { type: string }
+                      privacyPool: { type: string }
+                      network: { type: string, example: "eip155:8453" }
+  /api/health:
+    get:
+      tags: [Health]
+      summary: Liveness + readiness
+      description: Boolean presence checks for required config + readiness. Never returns secret values.
+      operationId: getHealth
+      responses:
+        "200": { description: Healthy. }
+        "503": { description: Not ready (a required dependency is missing). }
+  /api/anonymity-set:
+    get:
+      tags: [Pool state]
+      summary: Current anonymity set (pool deposit count)
+      description: Read-only, cached on-chain scan of independent depositors in the pool.
+      operationId: getAnonymitySet
+      responses:
+        "200":
+          description: Anonymity-set snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  anonymitySet: { type: integer, example: 2 }
+                  minimumForPrivacy: { type: integer, example: 30 }
+  /api/forwarding/postman:
+    get:
+      tags: [Discovery]
+      summary: Postman (relay signer) address + EIP-712 domain
+      description: The public relay-signer address and EIP-712 domain values. Read this instead of hardcoding the postman.
+      operationId: getPostman
+      responses:
+        "200":
+          description: Postman address + domain.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  postman: { type: string, example: "0x0000000000000000000000000000000000000000" }
+                  domain: { type: object }
+  /api/deposits/events:
+    get:
+      tags: [Pool state]
+      summary: Deposit/withdraw events for a wallet (recovery)
+      description: |
+        Read-only on-chain `Deposited` / `Withdrawn` events, used by wallet recovery to rebuild notes
+        from a seed. Accepts no secrets. Provide the wallet address to filter.
+      operationId: getDepositEvents
+      parameters:
+        - name: address
+          in: query
+          required: false
+          schema: { type: string }
+          description: Wallet address to filter events for.
+      responses:
+        "200":
+          description: Matching events.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  events: { type: array, items: { type: object } }
+  /api/zx402/privacy-check:
+    post:
+      tags: [Privacy]
+      summary: Free redacted exposure preview for an address
+      description: |
+        A free, rate-limited, redacted preview of an address's on-chain privacy exposure. The body is
+        just a **public wallet address** — no secrets. Mutates nothing.
+      operationId: postPrivacyCheck
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [address]
+              properties:
+                address:
+                  type: string
+                  example: "0xDbAA23601A95a01ee9B90160F6aA784CBE4E0f21"
+      responses:
+        "200":
+          description: Redacted exposure preview.
+          content:
+            application/json:
+              schema: { type: object }

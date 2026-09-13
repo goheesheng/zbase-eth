@@ -1,0 +1,25 @@
+{
+  "name": "@zbase-protocol/svm-x402-server",
+  "version": "1.0.0",
+  "description": "Standalone x402 facilitator server for Solana that routes payments through the zBase privacy pool when configured. Renamed from @zx402/svm-x402-server.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test server.test.js"
+  },
+  "license": "Apache-2.0",
+  "type": "commonjs",
+  "dependencies": {
+    "@zbase-protocol/svm": "*",
+    "@coral-xyz/anchor": "^0.32.1",
+    "@solana/spl-token": "^0.4.14",
+    "@solana/web3.js": "^1.98.4",
+    "@x402/core": "^2.22.0",
+    "@x402/express": "^2.22.0",
+    "@x402/extensions": "^2.22.0",
+    "@x402/svm": "^2.22.0",
+    "bn.js": "^5.2.3",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1"
+  }
+}

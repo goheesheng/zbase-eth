@@ -1,0 +1,40 @@
+[package]
+name = "zx402-privacy-pool"
+version = "0.1.0"
+description = "Created with Anchor"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "zx402_privacy_pool"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build", "anchor-spl/idl-build"]
+
+[dependencies]
+anchor-lang = "1.0.2"
+anchor-spl = "1.0.2"
+
+# BN254 Poseidon (circomlib-compatible) for commitment + LeanIMT hashing.
+# Versions are pinned to match light-poseidon 0.4's ark-* dependency major
+# (ark-ff 0.5 / ark-bn254 0.5). Using 0.4 of either crate produces a
+# different `Fr` type and breaks PrimeField trait bounds at compile time.
+light-poseidon = "0.4"
+ark-bn254 = "0.5"
+ark-ff = "0.5"
+
+# On-chain Groth16 verification via Solana altbn254 syscalls
+# (audited in Light Protocol V3 audit; ~200K CU per verify).
+groth16-solana = "0.2"
+
+# keccak256 for label / context hashing. Matches the EVM upstream's keccak.
+solana-keccak-hasher = "2"
+
+# Poseidon syscall — offloads round-constant table to the runtime so
+# poseidon hashing doesn't blow the 4KB BPF stack frame.
+solana-poseidon = "2"

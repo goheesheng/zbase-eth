@@ -1,0 +1,76 @@
+# zBase edge reverse proxy — fronts BOTH network projects (mainnet + sepolia).
+# Routes by hostname to containers over the external `zbase-web` network, by
+# container_name. Auto-HTTPS via Let's Encrypt (needs each A-record → box + 80/443
+# open). No ACME email on purpose (repo policy). No access logs (privacy). No
+# response timeouts (long Groth16 proving on /api/withdraw survives).
+#
+# CUTOVER MECHANIC: to move zbase.app from Sepolia → mainnet, change the two
+# marked reverse_proxy targets below and reload Caddy. No DNS change (cert
+# already held). Rollback = revert the two lines + reload. Reversible in seconds.
+
+(security_headers) {
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	header X-Content-Type-Options "nosniff"
+	header X-Frame-Options "DENY"
+	header Referrer-Policy "no-referrer"
+	header -Server
+}
+
+# ── Apex: CUTOVER DONE 2026-07-13 — zbase.app serves MAINNET (real USDC).
+#    Rollback = change `mainnet-app` → `sepolia-app` here + `mainnet-x402` →
+#    `sepolia-x402` in the x402 block, then reload. Reversible in seconds.
+#    Sepolia moved to testnet.zbase.app. ───────────────────────────────────────
+zbase.app {
+	import security_headers
+	encode zstd gzip
+	reverse_proxy mainnet-app:3000
+}
+
+www.zbase.app {
+	import security_headers
+	redir https://zbase.app{uri} permanent
+}
+
+# ── Sepolia's permanent home (survives the apex cutover). ────────────────────
+testnet.zbase.app {
+	import security_headers
+	encode zstd gzip
+	reverse_proxy sepolia-app:3000
+}
+
+x402-testnet.zbase.app {
+	import security_headers
+	encode zstd gzip
+	reverse_proxy sepolia-x402:4020
+}
+
+# ── Mainnet staging (verify mainnet end-to-end without touching the apex).
+#    Becomes unnecessary post-cutover but harmless to keep. ───────────────────
+mainnet-staging.zbase.app {
+	import security_headers
+	encode zstd gzip
+	reverse_proxy mainnet-app:3000
+}
+
+# ── Paid x402 API — CUTOVER DONE 2026-07-13, serves MAINNET (matches apex).
+#    Rollback alongside the apex block: `mainnet-x402` → `sepolia-x402`. ───────
+x402.zbase.app {
+	import security_headers
+	encode zstd gzip
+	reverse_proxy mainnet-x402:4020
+}
+
+# ── Docs — static MkDocs Material site (open-source, replaces GitBook). Served
+#    straight from the read-only /srv/docs volume (mounted in docker-compose.edge.yml).
+#    Content updates = `deploy/docs-deploy.sh` (build + rsync); no Caddy restart needed.
+#    First time only: recreate Caddy so the volume mounts — `deploy/deploy.sh edge`.
+docs.zbase.app {
+	import security_headers
+	encode zstd gzip
+	root * /srv/docs
+	file_server
+	handle_errors {
+		rewrite * /404.html
+		file_server
+	}
+}

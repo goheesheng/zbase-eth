@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>zBase — How it works</title>
+<style>
+  :root{
+    --ink:#0a0a0a;
+    --ink-2:#1a1a1a;
+    --mute:#6b7280;
+    --line:#e5e7eb;
+    --line-2:#f3f4f6;
+    --bg:#fafafa;
+    --accent:#1559ff;
+    --accent-2:#0a3edb;
+    --accent-soft:#eef3ff;
+    --good:#0a8a3a;
+    --good-soft:#eef9f2;
+    --warn:#a76800;
+    --warn-soft:#fbf3e2;
+    --bad:#c92a2a;
+    --bad-soft:#fbeded;
+    --purple:#6b21a8;
+    --purple-soft:#f5edff;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+
+  .wrap{max-width:1280px;margin:0 auto;padding:36px 32px 56px}
+
+  /* header */
+  header.h{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin-bottom:22px;border-bottom:1px solid var(--line);padding-bottom:18px}
+  header.h h1{margin:0 0 6px;font-size:30px;letter-spacing:-.02em;font-weight:700}
+  header.h p{margin:0;font-size:14.5px;line-height:1.5;color:var(--ink-2);max-width:760px}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+  .lg{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mute);background:#fff;border:1px solid var(--line);border-radius:999px;padding:4px 10px}
+  .dot{width:8px;height:8px;border-radius:999px;display:inline-block}
+  .dot.pub{background:var(--bad)}
+  .dot.priv{background:var(--good)}
+  .dot.zk{background:var(--purple)}
+
+  /* section */
+  h2.section{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--mute);margin:32px 0 14px}
+
+  /* ============ LANES (sequence diagram) ============ */
+  .lanes{display:grid;grid-template-columns:repeat(4,1fr);gap:0;border:1px solid var(--line);border-radius:14px;background:#fff;overflow:hidden;position:relative}
+  .lane{padding:14px 18px 22px;border-right:1px solid var(--line-2);position:relative}
+  .lane:last-child{border-right:none}
+  .lane h3{margin:0 0 4px;font-size:14px;font-weight:700;letter-spacing:-.005em}
+  .lane h3 .role{font-size:11px;font-weight:600;color:var(--mute);text-transform:uppercase;letter-spacing:.06em;margin-left:6px}
+  .lane .who{font-size:12px;color:var(--mute);min-height:30px;line-height:1.4}
+
+  .actor{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+  .icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0}
+  .icon.agent{background:#0a0a0a}
+  .icon.facil{background:var(--accent)}
+  .icon.pool{background:var(--purple)}
+  .icon.yield{background:var(--good)}
+
+  /* the timeline track at the top of each lane */
+  .axis{position:absolute;top:84px;bottom:14px;left:50%;width:2px;background:repeating-linear-gradient(to bottom,var(--line) 0 6px,transparent 6px 12px)}
+
+  /* steps live in the lane that "owns" the action */
+  .step{position:relative;margin:14px 0 0;padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;font-size:12.5px;line-height:1.45;color:var(--ink-2);box-shadow:0 1px 0 rgba(10,10,10,.02)}
+  .step .n{position:absolute;left:-14px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:999px;background:var(--accent);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px #fff}
+  .step b{color:var(--ink);font-weight:600}
+  .step.public{border-color:#f0bdbd;background:linear-gradient(180deg,#fff,var(--bad-soft))}
+  .step.private{border-color:#bde5cb;background:linear-gradient(180deg,#fff,var(--good-soft))}
+  .step.zk{border-color:#d8bfff;background:linear-gradient(180deg,#fff,var(--purple-soft))}
+  .step .tag{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin-bottom:4px}
+  .step.public .tag{color:var(--bad)}
+  .step.private .tag{color:var(--good)}
+  .step.zk .tag{color:var(--purple)}
+
+  .arrow{position:relative;margin:6px 0 0;height:18px}
+  .arrow::before{content:"";position:absolute;left:50%;top:0;bottom:6px;width:2px;background:var(--accent);transform:translateX(-1px)}
+  .arrow::after{content:"";position:absolute;left:50%;bottom:0;width:0;height:0;border:5px solid transparent;border-top-color:var(--accent);transform:translateX(-50%)}
+  .arrow.priv::before{background:var(--good)}
+  .arrow.priv::after{border-top-color:var(--good)}
+  .arrow.zk::before{background:var(--purple)}
+  .arrow.zk::after{border-top-color:var(--purple)}
+
+  .spacer{height:18px}
+
+  /* ============ INSIDE-THE-PROOF panel ============ */
+  .proof{display:grid;grid-template-columns:1.1fr 1fr;gap:18px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:20px 22px}
+  .proof h3{margin:0 0 6px;font-size:16px;font-weight:700;letter-spacing:-.01em}
+  .proof .sub{margin:0 0 14px;font-size:13px;color:var(--mute);line-height:1.5}
+  .claims{display:flex;flex-direction:column;gap:8px}
+  .claim{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;font-size:13px;line-height:1.45}
+  .claim .k{width:22px;height:22px;border-radius:999px;background:var(--purple-soft);color:var(--purple);font-weight:700;font-size:11px;display:flex;align-items:center;justify-content:center;flex-shrink:0;border:1px solid #d8bfff}
+  .claim b{color:var(--ink)}
+  .claim .desc{color:var(--ink-2)}
+  .reveal{margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .reveal .card{border:1px solid var(--line);border-radius:9px;padding:10px 12px;font-size:12.5px;line-height:1.45}
+  .reveal .card .hd{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;margin-bottom:4px}
+  .reveal .card.shown{background:var(--good-soft);border-color:#bde5cb}
+  .reveal .card.shown .hd{color:var(--good)}
+  .reveal .card.hidden{background:var(--bad-soft);border-color:#f0bdbd}
+  .reveal .card.hidden .hd{color:var(--bad)}
+
+  /* ============ ON-CHAIN VIEW ============ */
+  .chain{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .chain .panel{border:1px solid var(--line);border-radius:14px;background:#fff;padding:18px 20px}
+  .chain h3{margin:0 0 4px;font-size:14px;font-weight:700;letter-spacing:-.005em}
+  .chain h3 .badge{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:2px 8px;border-radius:999px;margin-left:8px;vertical-align:middle}
+  .badge.bad{background:var(--bad-soft);color:var(--bad);border:1px solid #f0bdbd}
+  .badge.good{background:var(--good-soft);color:var(--good);border:1px solid #bde5cb}
+  .chain p.sub{margin:0 0 10px;font-size:12.5px;color:var(--mute)}
+  .tx{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;line-height:1.6;background:#f8f9fb;border:1px solid var(--line);border-radius:8px;padding:10px 12px;color:var(--ink-2);white-space:pre;overflow-x:auto}
+  .tx .from{color:var(--bad);font-weight:700}
+  .tx .to{color:var(--ink)}
+  .tx .pool{color:var(--purple);font-weight:700}
+  .tx .ok{color:var(--good);font-weight:700}
+  .tx .label{color:var(--mute)}
+
+  /* ============ INTEGRATION FOOTER ============ */
+  .integ{display:grid;grid-template-columns:1.2fr 1fr;gap:18px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:18px 20px}
+  .integ h3{margin:0 0 8px;font-size:15px;font-weight:700}
+  .integ p{margin:0;font-size:13px;line-height:1.5;color:var(--ink-2)}
+  pre.snippet{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;line-height:1.6;background:#0a0a0a;color:#e5e7eb;border-radius:10px;padding:14px 16px;margin:10px 0 0;overflow-x:auto}
+  pre.snippet .c{color:#6b7280}
+  pre.snippet .k{color:#79b8ff}
+  pre.snippet .s{color:#85e89d}
+  pre.snippet .v{color:#ffab70}
+
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  .stat{border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .stat .v{font-size:22px;font-weight:700;letter-spacing:-.02em;font-feature-settings:"tnum" 1;color:var(--accent)}
+  .stat .l{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.07em;font-weight:600;margin-top:3px}
+
+  footer.f{margin-top:28px;font-size:11.5px;color:var(--mute);text-align:center}
+
+  @media (max-width:1080px){
+    .lanes{grid-template-columns:1fr 1fr}
+    .chain{grid-template-columns:1fr}
+    .integ{grid-template-columns:1fr}
+    .proof{grid-template-columns:1fr}
+  }
+
+  @media print{
+    body{background:#fff}
+    .wrap{max-width:none;padding:18px 16px}
+    @page{size:A4 landscape;margin:10mm}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="h">
+    <div>
+      <h1>How zBase works</h1>
+      <p>An AI agent deposits USDC into a privacy pool, then pays any x402 endpoint via a Groth16 ZK proof relayed by the facilitator. The agent's wallet never appears in the settlement. Idle deposits earn yield (Kamino on Solana, Morpho on Base) until the next withdrawal needs them.</p>
+    </div>
+    <div class="legend">
+      <span class="lg"><span class="dot pub"></span> public action</span>
+      <span class="lg"><span class="dot zk"></span> ZK proof</span>
+      <span class="lg"><span class="dot priv"></span> private settlement</span>
+    </div>
+  </header>
+
+  <h2 class="section">The flow — four actors, six steps</h2>
+
+  <!-- ============ LANES ============ -->
+  <div class="lanes">
+
+    <!-- AGENT lane -->
+    <div class="lane">
+      <div class="actor">
+        <div class="icon agent">A</div>
+        <div>
+          <h3>Agent <span class="role">Buyer</span></h3>
+          <div class="who">Your AI agent — trading bot, MEV searcher, LLM caller, anything that pays via x402.</div>
+        </div>
+      </div>
+
+      <div class="step public">
+        <div class="tag">Step 1 · One-time, public</div>
+        <b>Deposit USDC into the pool.</b> Hash a commitment from <code>(nullifier, secret, value)</code> and submit it on-chain. Save the secrets locally — they're the keys to withdraw.
+      </div>
+
+      <div class="arrow"></div>
+
+      <div class="step">
+        <div class="tag">Step 2 · HTTPS</div>
+        Call any paid x402 endpoint. Server responds <b>HTTP&nbsp;402</b> with a price quote.
+      </div>
+
+      <div class="arrow"></div>
+
+      <div class="step">
+        <div class="tag">Step 3 · HTTPS</div>
+        Send deposit secrets + payment intent to <b>facilitator /settle</b>. (Secrets never touch the chain.)
+      </div>
+
+      <div class="spacer"></div>
+      <div class="spacer"></div>
+
+      <div class="step private">
+        <div class="tag">Step 6 · Retry</div>
+        Retry the paid endpoint with <code>X-Zx402-Settlement: &lt;txHash&gt;</code>. Server checks its cache, returns <b>200&nbsp;OK</b> with the real data.
+      </div>
+    </div>
+
+    <!-- FACILITATOR lane -->
+    <div class="lane">
+      <div class="actor">
+        <div class="icon facil">F</div>
+        <div>
+          <h3>Facilitator <span class="role">zBase server</span></h3>
+          <div class="who">Drop-in x402 facilitator. Generates the ZK proof and relays the on-chain transaction. The piece you integrate.</div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+      <div class="spacer"></div>
+
+      <div class="step zk">
+        <div class="tag">Step 4 · ZK proof</div>
+        <b>Generate Groth16 proof</b> (snarkjs, ~2.5s). Proves four things about the deposit — without revealing which deposit.
+      </div>
+
+      <div class="arrow zk"></div>
+
+      <div class="step">
+        <div class="tag">Step 5 · Relay</div>
+        Submit <code>relay_withdrawal(proof, recipient)</code> to the on-chain program. The facilitator pays gas, not the agent.
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="step private">
+        <div class="tag">Cache</div>
+        Store the confirmed <b>txHash</b> in a server-side cache so the merchant can recognize the private settlement.
+      </div>
+    </div>
+
+    <!-- POOL lane -->
+    <div class="lane">
+      <div class="actor">
+        <div class="icon pool">P</div>
+        <div>
+          <h3>Privacy Pool <span class="role">On-chain program</span></h3>
+          <div class="who">Anchor program on Solana (Privacy Pools fork on Base). Verifies proofs, marks nullifiers, transfers USDC out.</div>
+        </div>
+      </div>
+
+      <div class="step public">
+        <div class="tag">On deposit</div>
+        Poseidon-hash commitment, insert into <b>LeanIMT Merkle tree</b>. Update on-chain root.
+      </div>
+
+      <div class="spacer"></div>
+      <div class="spacer"></div>
+      <div class="spacer"></div>
+
+      <div class="step zk">
+        <div class="tag">On relay</div>
+        <b>Verify Groth16</b> on-chain (148K CU of 200K budget) · check ASP root · mark nullifier PDA · enforce recipient binding.
+      </div>
+
+      <div class="arrow priv"></div>
+
+      <div class="step private">
+        <div class="tag">Settle</div>
+        Pool vault → <b>recipient ATA</b>. Transaction's sender = pool, not the agent.
+      </div>
+    </div>
+
+    <!-- YIELD lane -->
+    <div class="lane">
+      <div class="actor">
+        <div class="icon yield">Y</div>
+        <div>
+          <h3>Yield Market <span class="role">Kamino · Morpho</span></h3>
+          <div class="who">Idle deposits don't sit still. Pool supplies USDC to a lending market between settlements.</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="tag">Between settlements</div>
+        Admin tick: <b>supply_to_kamino</b> idle USDC → earn ~4–9% APY in kTokens.
+      </div>
+
+      <div class="spacer"></div>
+      <div class="spacer"></div>
+      <div class="spacer"></div>
+
+      <div class="step">
+        <div class="tag">During relay</div>
+        If pool's idle USDC &lt; payout, program <b>redeems from Kamino</b> in the same instruction. Yield accrues to depositors.
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="step">
+        <div class="tag">On withdraw</div>
+        Depositor's payout = <b>principal + proportional yield</b>. Both invisible inside the pool.
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ============ THE ZK PROOF ============ -->
+  <h2 class="section">What the ZK proof actually proves</h2>
+  <div class="proof">
+    <div>
+      <h3>One Groth16 proof, four simultaneous claims</h3>
+      <p class="sub">The facilitator can't generate a valid proof unless all four claims are true. Anyone can verify the proof in 148K compute units on-chain — but the proof reveals <b>nothing</b> about which deposit it corresponds to.</p>
+      <div class="claims">
+        <div class="claim"><div class="k">1</div><div class="desc"><b>Membership.</b> "I own <i>some</i> commitment in the pool's Merkle tree." (Doesn't say which.)</div></div>
+        <div class="claim"><div class="k">2</div><div class="desc"><b>Compliance.</b> "My deposit is inside the ASP-approved subset." (Not Tornado — Vitalik's design.)</div></div>
+        <div class="claim"><div class="k">3</div><div class="desc"><b>No double-spend.</b> "My nullifier has never been used." (Pool marks it on settle.)</div></div>
+        <div class="claim"><div class="k">4</div><div class="desc"><b>Recipient binding.</b> "This proof is bound to <i>this</i> recipient and amount." (Relayer can't redirect funds.)</div></div>
+      </div>
+    </div>
+    <div>
+      <h3>What's revealed vs hidden</h3>
+      <p class="sub">After verification the on-chain world learns just enough to settle — and not a single bit more.</p>
+      <div class="reveal">
+        <div class="card shown">
+          <div class="hd">✓ Revealed</div>
+          Recipient address · Payout amount · Nullifier (used once) · "Some deposit funded this"
+        </div>
+        <div class="card hidden">
+          <div class="hd">✗ Hidden</div>
+          Which deposit · Depositor wallet · Deposit amount · Deposit timing · Any history link
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ ON-CHAIN COMPARISON ============ -->
+  <h2 class="section">What the on-chain settlement looks like</h2>
+  <div class="chain">
+    <div class="panel">
+      <h3>Standard x402 <span class="badge bad">public</span></h3>
+      <p class="sub">Agent's wallet signs the transfer. Anyone watching the chain learns who paid whom, when, and how much.</p>
+<div class="tx"><span class="label">// block 461358659</span>
+<span class="from">From: 0xAgent…7f2a</span>  <span class="label">(your bot)</span>
+<span class="to">  To: 0xProvider…b1c4</span> <span class="label">(Anthropic)</span>
+Amount: 1.00 USDC
+<span class="label">// indexed by 8 wallet trackers ✗</span></div>
+    </div>
+    <div class="panel">
+      <h3>zBase settlement <span class="badge good">private</span></h3>
+      <p class="sub">The pool signs the transfer. The agent's wallet is nowhere in the transaction. The link between buyer and payment is broken.</p>
+<div class="tx"><span class="label">// block 461358923</span>
+<span class="pool">From: zBasePool…9eA1</span> <span class="label">(facilitator)</span>
+<span class="to">  To: 0xProvider…b1c4</span> <span class="label">(Anthropic)</span>
+Amount: 1.00 USDC
+<span class="ok">// nullifier marked, proof verified ✓</span></div>
+    </div>
+  </div>
+
+  <!-- ============ INTEGRATION + STATS ============ -->
+  <h2 class="section">Integration · one URL, zero agent code changes</h2>
+  <div class="integ">
+    <div>
+      <h3>Change your facilitator URL. That's it.</h3>
+      <p>Any x402 agent — AgentCash, OpenClaw, Claude Code, your own — speaks the standard x402 protocol. zBase is a drop-in facilitator: same <code>/supported</code>, <code>/verify</code>, <code>/settle</code> endpoints, with a privacy layer behind them.</p>
+<pre class="snippet"><span class="c">// before</span>
+<span class="k">const</span> facilitator = <span class="s">"https://api.cdp.coinbase.com/x402"</span>;
+
+<span class="c">// after — privacy by default</span>
+<span class="k">const</span> facilitator = <span class="s">"https://zbase.xyz/api/facilitator"</span>;</pre>
+    </div>
+    <div>
+      <h3>Where it stands today</h3>
+      <div class="stats">
+        <div class="stat"><div class="v">2.5s</div><div class="l">ZK proof generation</div></div>
+        <div class="stat"><div class="v">148K</div><div class="l">Solana compute units</div></div>
+        <div class="stat"><div class="v">~4–9%</div><div class="l">Yield on idle USDC</div></div>
+        <div class="stat"><div class="v">1 URL</div><div class="l">To integrate</div></div>
+      </div>
+      <p style="margin-top:12px;font-size:12.5px;color:var(--mute);line-height:1.5">Live on Solana devnet (program <code>7qGh…t3eM</code>) and Base Sepolia. Apache 2.0. Forked from 0xbow Privacy Pools — Vitalik-coauthored cryptography.</p>
+    </div>
+  </div>
+
+  <footer class="f">
+    zBase · the privacy module of the x402 stack · github.com/goheesheng/zx402
+  </footer>
+
+</div>
+</body>
+</html>

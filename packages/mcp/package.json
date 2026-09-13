@@ -1,0 +1,64 @@
+{
+  "name": "@zbase-protocol/mcp",
+  "version": "0.3.1",
+  "description": "MCP server for zBase — private x402 agent-payment demos on Base. Lets Claude Desktop / Cursor / any MCP-compatible client call zBase from natural language.",
+  "type": "module",
+  "bin": {
+    "mcp": "./dist/index.js",
+    "zbase-mcp": "./dist/index.js",
+    "zbase": "./dist/cli.js"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "AGENTS.md",
+    "SECURITY.md",
+    "examples"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js",
+    "prepublishOnly": "rm -rf dist && tsc"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.20.0",
+    "@zbase-protocol/core": "^0.5.0",
+    "viem": "^2.55.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "license": "Apache-2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://zbase.app",
+  "bugs": {
+    "url": "https://github.com/goheesheng/zBase/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/goheesheng/zBase",
+    "directory": "packages/mcp"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "zbase",
+    "privacy",
+    "zk",
+    "x402",
+    "solana",
+    "base",
+    "agents",
+    "claude"
+  ],
+  "engines": {
+    "node": ">=18"
+  }
+}

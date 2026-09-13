@@ -1,0 +1,43 @@
+{
+  "date": "2026-07-18",
+  "window": "7d",
+  "metrics": {
+    "commits": 44,
+    "contributors": 1,
+    "insertions": 27342,
+    "deletions": 3040,
+    "net_loc": 24302,
+    "logical_new_loc_estimate": 14000,
+    "test_loc": 4472,
+    "test_ratio": 0.16,
+    "test_ratio_note": "Distorted low by a single 13.2k-line scaffold commit (a32f76a) with no tests; hand-written-code ratio ~0.30-0.35",
+    "sessions": 19,
+    "deep_sessions": 2,
+    "feat_count": 19,
+    "fix_count": 7,
+    "chore_count": 3,
+    "docs_count": 2,
+    "prose_subject_count": 13,
+    "peak_hours": [14, 17],
+    "ai_assisted_commits": 0
+  },
+  "authors": {
+    "goheesheng": { "commits": 44, "insertions": 27342, "deletions": 3040, "test_ratio": 0.16, "top_area": "packages/core/src/" }
+  },
+  "version_range": ["0.2.1", "0.3.0"],
+  "test_health": {
+    "suites_added_this_session": 6,
+    "suites_rewritten": 1,
+    "new_suites": ["test-anonymity-count", "test-anonymity-gate", "test-pilot-tier", "test-sdk-pilot", "test-change-note-recovery", "test-spend-guard"]
+  },
+  "highlights": {
+    "shipped": "Privacy facilitator went live on mainnet (pilot tier built, then collapsed into ship-and-disclose)",
+    "bugs_caught": [
+      "Anonymity gate counted tree leaves not depositors (32cd456)",
+      "Anonymity gate counted deposits not depositors (0977a44)",
+      "Index-collision fund-loss bug more reachable than the 0.985 loss (b38b2fa)"
+    ],
+    "biggest_ship": "b38b2fa — parent-keyed change notes: close recovery gap, kill index collision, guard every spend (SDK 0.3.0)"
+  },
+  "tweetable": "Week of Jul 11-18: 44 commits solo, +27.3k LOC, SDK 0.2.1->0.3.0, 6 new test suites | privacy facilitator live on mainnet | 3 invisible privacy/fund-loss bugs caught by reading code not dashboards"
+}

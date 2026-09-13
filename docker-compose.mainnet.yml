@@ -1,0 +1,72 @@
+# zBase MAINNET project — real USDC. Served at mainnet-staging.zbase.app until
+# the apex cutover, then zbase.app + x402.zbase.app. Env from
+# /srv/zbase/mainnet/*.env ONLY — a mainnet secret is structurally unreachable
+# from the sepolia project (separate files, separate env_file mounts).
+#
+# REQUIRES cloud Upstash (facilitator-authz throws on mainnet without it) — no
+# local redis here. Health stays "degraded" until real BASE_MAINNET_* + custody
+# values are filled; that is expected scaffolding state, not a bug.
+#
+# Deploy: ./deploy/deploy.sh mainnet
+name: zbase-mainnet
+
+services:
+  app:
+    build:
+      context: .
+      args:
+        GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-unknown}
+        NEXT_PUBLIC_NETWORK: mainnet # build-time inlined — separate image from sepolia
+        NEXT_PUBLIC_BASE_MAINNET_RPC: ${NEXT_PUBLIC_BASE_MAINNET_RPC:-}
+        NEXT_PUBLIC_WALLETCONNECT_ID: ${NEXT_PUBLIC_WALLETCONNECT_ID:-}
+        # Contract addresses read CLIENT-SIDE at build time (contracts.ts reads
+        # process.env.NEXT_PUBLIC_BASE_MAINNET_* to build the deposit UI). Without
+        # these the browser deposit flow resolves to zero addresses. Public by
+        # definition — sourced from the --env-file.
+        NEXT_PUBLIC_BASE_MAINNET_ENTRYPOINT: ${NEXT_PUBLIC_BASE_MAINNET_ENTRYPOINT:-}
+        NEXT_PUBLIC_BASE_MAINNET_POOL: ${NEXT_PUBLIC_BASE_MAINNET_POOL:-}
+        NEXT_PUBLIC_BASE_MAINNET_WITHDRAWAL_VERIFIER: ${NEXT_PUBLIC_BASE_MAINNET_WITHDRAWAL_VERIFIER:-}
+        NEXT_PUBLIC_BASE_MAINNET_COMMITMENT_VERIFIER: ${NEXT_PUBLIC_BASE_MAINNET_COMMITMENT_VERIFIER:-}
+        NEXT_PUBLIC_BASE_MAINNET_POOL_DEPLOY_BLOCK: ${NEXT_PUBLIC_BASE_MAINNET_POOL_DEPLOY_BLOCK:-}
+        # Satisfy the mainnet build-time Upstash guard (facilitator-authz.ts
+        # throws at module-load on mainnet without these; next build loads all
+        # route modules). Sourced from the --env-file at build.
+        UPSTASH_REDIS_REST_URL: ${UPSTASH_REDIS_REST_URL:-}
+        UPSTASH_REDIS_REST_TOKEN: ${UPSTASH_REDIS_REST_TOKEN:-}
+    image: zbase-app-mainnet:latest
+    container_name: mainnet-app
+    env_file: /srv/zbase/mainnet/app.env
+    ports:
+      - "127.0.0.1:3000:3000" # mainnet loopback (sepolia uses :3100)
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.status<600?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks: [zbase-web]
+
+  x402:
+    build:
+      context: ./x402-server
+    image: zbase-x402:latest # same network-agnostic image as sepolia
+    container_name: mainnet-x402
+    env_file: /srv/zbase/mainnet/x402.env # X402_NETWORK=mainnet + CDP keys
+    volumes:
+      - x402_logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4020/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks: [zbase-web]
+
+networks:
+  zbase-web:
+    external: true
+
+volumes:
+  x402_logs:

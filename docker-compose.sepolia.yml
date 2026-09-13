@@ -1,0 +1,54 @@
+# zBase SEPOLIA project — testnet sandbox. Served at testnet.zbase.app +
+# x402-testnet.zbase.app (and zbase.app until the mainnet cutover). Uses cloud
+# Upstash (zbase-sepolia DB) for Redis — provider-managed backups, no local
+# redis/srh to run. Env from /srv/zbase/sepolia/*.env ONLY.
+#
+# Deploy: ./deploy/deploy.sh sepolia
+name: zbase-sepolia
+
+services:
+  app:
+    build:
+      context: .
+      args:
+        GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-unknown}
+        NEXT_PUBLIC_NETWORK: sepolia
+        NEXT_PUBLIC_BASE_SEPOLIA_RPC: ${NEXT_PUBLIC_BASE_SEPOLIA_RPC:-}
+        NEXT_PUBLIC_WALLETCONNECT_ID: ${NEXT_PUBLIC_WALLETCONNECT_ID:-}
+    image: zbase-app-sepolia:latest
+    container_name: sepolia-app
+    env_file: /srv/zbase/sepolia/app.env
+    ports:
+      - "127.0.0.1:3100:3000" # sepolia loopback (mainnet uses :3000)
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.status<600?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks: [zbase-web]
+
+  x402:
+    build:
+      context: ./x402-server
+    image: zbase-x402:latest # network-agnostic image, shared with mainnet
+    container_name: sepolia-x402
+    env_file: /srv/zbase/sepolia/x402.env # X402_NETWORK=sepolia, NO CDP keys
+    volumes:
+      - x402_logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4020/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks: [zbase-web]
+
+networks:
+  zbase-web:
+    external: true
+
+volumes:
+  x402_logs:

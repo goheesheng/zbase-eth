@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>zBase — Explained simply</title>
+<style>
+  :root{
+    --ink:#0a0a0a;
+    --ink-2:#1f2937;
+    --mute:#6b7280;
+    --line:#e5e7eb;
+    --line-2:#f3f4f6;
+    --bg:#fff9f4;
+    --paper:#ffffff;
+    --accent:#1559ff;
+    --accent-soft:#eef3ff;
+    --good:#0a8a3a;
+    --good-soft:#eaf7ee;
+    --warn:#a76800;
+    --warn-soft:#fff4dc;
+    --bad:#c92a2a;
+    --bad-soft:#fdeaea;
+    --pink:#db2777;
+    --pink-soft:#fde7f0;
+    --teal:#0d9488;
+    --teal-soft:#e6f6f4;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",ui-sans-serif,system-ui,Roboto,Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-size:17px;line-height:1.55}
+  .wrap{max-width:1100px;margin:0 auto;padding:40px 28px 64px}
+
+  /* hero */
+  .hero{text-align:center;padding:24px 0 18px;border-bottom:2px dashed #e7d6c4;margin-bottom:36px}
+  .hero .kicker{font-size:13px;font-weight:700;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+  .hero h1{margin:0 0 12px;font-size:46px;line-height:1.05;letter-spacing:-.025em;font-weight:800}
+  .hero h1 .hi{background:linear-gradient(180deg,transparent 60%,#ffe89a 60%);padding:0 4px}
+  .hero p{margin:0 auto;max-width:680px;font-size:19px;line-height:1.5;color:var(--ink-2)}
+
+  h2.section{font-size:14px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);margin:48px 0 18px;text-align:center}
+  h2.section::before,h2.section::after{content:"";display:inline-block;width:40px;height:1px;background:var(--mute);vertical-align:middle;margin:0 12px;opacity:.4}
+
+  /* the everyday problem */
+  .problem{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .pcard{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:22px 24px;position:relative}
+  .pcard .top{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .pcard .em{font-size:32px}
+  .pcard h3{margin:0;font-size:20px;font-weight:700;letter-spacing:-.01em}
+  .pcard p{margin:0;font-size:16px;line-height:1.55;color:var(--ink-2)}
+  .pcard.cash{border-color:#f3d2d2;background:linear-gradient(180deg,#fff,var(--bad-soft))}
+  .pcard.crypto{border-color:#c8d4f7;background:linear-gradient(180deg,#fff,var(--accent-soft))}
+  .pcard ul{margin:10px 0 0;padding-left:18px;color:var(--ink-2);font-size:15.5px}
+  .pcard ul li{margin-bottom:4px}
+
+  /* big analogy */
+  .analogy{background:var(--paper);border:1px solid var(--line);border-radius:18px;padding:26px 28px;box-shadow:0 1px 0 rgba(10,10,10,.02)}
+  .analogy .lead{font-size:21px;font-weight:600;line-height:1.45;margin:0 0 6px}
+  .analogy .lead .hi{background:linear-gradient(180deg,transparent 60%,#ffe89a 60%)}
+  .analogy p.sub{margin:0 0 18px;color:var(--mute);font-size:15px}
+
+  .coat{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-top:8px}
+  .coat .step{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 14px;position:relative;text-align:center}
+  .coat .step .n{position:absolute;top:-12px;left:50%;transform:translateX(-50%);width:28px;height:28px;border-radius:999px;background:var(--accent);color:#fff;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 4px var(--paper)}
+  .coat .step .em{font-size:34px;display:block;margin:6px 0 8px}
+  .coat .step h4{margin:0 0 4px;font-size:14px;font-weight:700}
+  .coat .step p{margin:0;font-size:13px;line-height:1.4;color:var(--ink-2)}
+
+  .punchline{margin-top:20px;background:var(--good-soft);border:1px solid #b8e0c4;border-radius:12px;padding:16px 18px;font-size:16.5px;line-height:1.5;color:var(--ink-2)}
+  .punchline b{color:var(--good)}
+
+  /* the actual flow, plain english */
+  .flow{display:grid;grid-template-columns:1fr;gap:14px}
+  .lane{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px 22px;display:grid;grid-template-columns:80px 1fr 1.4fr;gap:18px;align-items:center}
+  .lane .num{display:flex;align-items:center;justify-content:center;width:60px;height:60px;border-radius:999px;background:var(--accent);color:#fff;font-size:26px;font-weight:800}
+  .lane h4{margin:0 0 4px;font-size:18px;font-weight:700;letter-spacing:-.005em}
+  .lane .what{font-size:15px;line-height:1.5;color:var(--ink-2);margin:0}
+  .lane .why{font-size:14px;line-height:1.55;color:var(--mute);background:#fafafa;border-left:3px solid var(--line);padding:10px 14px;border-radius:0 8px 8px 0}
+  .lane .why b{color:var(--ink-2)}
+  .lane.public .num{background:var(--bad)}
+  .lane.private .num{background:var(--good)}
+  .lane.zk .num{background:var(--pink)}
+  .lane.yield .num{background:var(--teal)}
+  .lane .tag{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fff;background:var(--mute);padding:2px 8px;border-radius:999px;margin-bottom:6px}
+  .lane.public .tag{background:var(--bad)}
+  .lane.private .tag{background:var(--good)}
+  .lane.zk .tag{background:var(--pink)}
+  .lane.yield .tag{background:var(--teal)}
+
+  /* before/after */
+  .compare{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .cmp{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:22px 24px}
+  .cmp.bad{border-color:#f3d2d2}
+  .cmp.good{border-color:#b8e0c4}
+  .cmp h3{margin:0 0 4px;font-size:18px;font-weight:700}
+  .cmp h3 .em{margin-right:6px}
+  .cmp .sub{margin:0 0 14px;font-size:14px;color:var(--mute)}
+  .cmp .receipt{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13.5px;line-height:1.7;background:#fafafa;border:1px dashed var(--line);border-radius:10px;padding:14px 16px;color:var(--ink-2)}
+  .cmp.bad .receipt{background:var(--bad-soft);border-color:#f3d2d2}
+  .cmp.good .receipt{background:var(--good-soft);border-color:#b8e0c4}
+  .cmp .receipt .lbl{color:var(--mute)}
+  .cmp .receipt b{color:var(--ink)}
+  .cmp .receipt .red{color:var(--bad);font-weight:700}
+  .cmp .receipt .green{color:var(--good);font-weight:700}
+  .cmp .takeaway{margin-top:12px;font-size:14.5px;color:var(--ink-2);line-height:1.5}
+  .cmp.bad .takeaway b{color:var(--bad)}
+  .cmp.good .takeaway b{color:var(--good)}
+
+  /* audiences */
+  .aud{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+  .aud .person{background:var(--paper);border:1px solid var(--line);border-radius:16px;padding:18px 20px;display:flex;flex-direction:column;gap:8px;position:relative;overflow:hidden}
+  .aud .person::before{content:"";position:absolute;top:0;left:0;right:0;height:4px}
+  .aud .person.tier1::before{background:linear-gradient(90deg,#dc2626,#f59e0b)}
+  .aud .person.tier2::before{background:linear-gradient(90deg,#f59e0b,#10b981)}
+  .aud .person.tier3::before{background:linear-gradient(90deg,#10b981,#3b82f6)}
+  .aud .tier{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-top:4px}
+  .aud .person.tier1 .tier{color:#dc2626}
+  .aud .person.tier2 .tier{color:#a76800}
+  .aud .person.tier3 .tier{color:#10b981}
+  .aud .person .avatar{font-size:36px;line-height:1;margin-bottom:2px}
+  .aud .person h4{margin:0;font-size:17px;font-weight:700;letter-spacing:-.005em}
+  .aud .person .pain{font-size:14.5px;line-height:1.5;color:var(--ink-2);margin:0}
+  .aud .person .pain b{color:var(--bad);font-weight:600}
+  .aud .person .fix{font-size:14px;line-height:1.5;color:var(--ink-2);margin:0;background:var(--good-soft);border-left:3px solid var(--good);padding:9px 12px;border-radius:0 8px 8px 0}
+  .aud .person .fix b{color:var(--good);font-weight:700}
+  .aud .person .examples{font-size:12px;color:var(--mute);margin:0;font-style:italic}
+
+  .audhdr{text-align:center;max-width:620px;margin:0 auto 22px;font-size:15.5px;color:var(--ink-2);line-height:1.55}
+
+  /* FAQ */
+  .faq{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .qa{background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px 20px}
+  .qa .q{font-size:15.5px;font-weight:700;margin:0 0 8px;color:var(--ink);line-height:1.4}
+  .qa .q::before{content:"Q ";color:var(--accent);font-weight:800;letter-spacing:.06em}
+  .qa .a{font-size:14.5px;line-height:1.55;color:var(--ink-2);margin:0}
+  .qa .a::before{content:"A ";color:var(--good);font-weight:800;letter-spacing:.06em}
+
+  /* one-liner closing */
+  .closer{margin-top:30px;background:#0a0a0a;color:#fff;border-radius:18px;padding:28px 32px;text-align:center}
+  .closer .big{font-size:24px;font-weight:700;letter-spacing:-.01em;line-height:1.35;margin:0 0 8px}
+  .closer .big .hi{background:linear-gradient(180deg,transparent 55%,#ffe89a 55%);color:#0a0a0a;padding:0 6px}
+  .closer p{margin:0;font-size:14.5px;color:#9ca3af}
+
+  footer.f{margin-top:28px;font-size:12px;color:var(--mute);text-align:center}
+
+  @media (max-width:880px){
+    .problem,.compare,.faq{grid-template-columns:1fr}
+    .aud{grid-template-columns:1fr}
+    .coat{grid-template-columns:1fr 1fr}
+    .lane{grid-template-columns:64px 1fr;gap:12px}
+    .lane .why{grid-column:1 / -1}
+    .hero h1{font-size:34px}
+  }
+  @media print{
+    body{background:#fff}
+    @page{size:A4;margin:12mm}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="kicker">zBase — explained simply</div>
+    <h1>Think of it as a <span class="hi">coat check for crypto payments</span>.</h1>
+    <p>Your AI bot pays for stuff online. Right now, every payment is public — like writing your name and address on a billboard every time you buy coffee. zBase fixes that. Without breaking any rules.</p>
+  </section>
+
+  <!-- THE EVERYDAY PROBLEM -->
+  <h2 class="section">The problem, in normal words</h2>
+  <div class="problem">
+    <div class="pcard cash">
+      <div class="top"><span class="em">💵</span><h3>How cash works</h3></div>
+      <p>You hand someone a $5 bill for coffee. Nobody knows where you got that bill, what else you bought today, or what you'll buy next. <b>That's normal.</b></p>
+    </div>
+    <div class="pcard crypto">
+      <div class="top"><span class="em">📡</span><h3>How crypto payments work today</h3></div>
+      <p>Every payment your AI agent makes is broadcast forever. Anyone can see:</p>
+      <ul>
+        <li>Which AI services you use (Claude? GPT? Gemini?)</li>
+        <li>How much you spent and when</li>
+        <li>Your complete history — going back forever</li>
+        <li><b>Your competitors can copy your strategy in real time.</b></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- THE ANALOGY -->
+  <h2 class="section">The simple analogy</h2>
+  <div class="analogy">
+    <p class="lead">zBase is a <span class="hi">coat check at a party</span>. You drop your coat off. So does everyone else. Later, you grab "a coat" — and nobody can tell whose was whose.</p>
+    <p class="sub">Except instead of coats, it's USDC. And the magic ticket that proves you have one is math, not a paper stub.</p>
+
+    <div class="coat">
+      <div class="step"><div class="n">1</div><span class="em">🧥</span><h4>Drop off</h4><p>You put $10 in the pool. So does everyone else.</p></div>
+      <div class="step"><div class="n">2</div><span class="em">🎟️</span><h4>Get a ticket</h4><p>You keep a secret code only you know.</p></div>
+      <div class="step"><div class="n">3</div><span class="em">🛒</span><h4>Buy stuff</h4><p>Your bot wants to pay Anthropic $1.</p></div>
+      <div class="step"><div class="n">4</div><span class="em">🪄</span><h4>Show ticket</h4><p>The pool checks: "yep, real ticket." Pays Anthropic.</p></div>
+      <div class="step"><div class="n">5</div><span class="em">🕵️</span><h4>Watchers see…</h4><p>"The pool paid Anthropic." Not who. Not you.</p></div>
+    </div>
+
+    <div class="punchline">
+      <b>The key trick:</b> the "ticket" is a piece of math (a zero-knowledge proof) that says <i>"I have a valid deposit"</i> without saying <i>which</i> deposit. Same as showing the bouncer your wristband works without telling them your name.
+    </div>
+  </div>
+
+  <!-- THE REAL FLOW -->
+  <h2 class="section">What actually happens, step by step</h2>
+  <div class="flow">
+
+    <div class="lane public">
+      <div class="num">1</div>
+      <div>
+        <span class="tag">Public · one time</span>
+        <h4>Your bot deposits some USDC into the pool</h4>
+        <p class="what">Anyone can see you put money in — that's fine. Hundreds of others do too. You're now part of the crowd.</p>
+      </div>
+      <div class="why"><b>Why public:</b> you need to prove later that you really did deposit. So this part is recorded openly, just like cash going into a coat check.</div>
+    </div>
+
+    <div class="lane">
+      <div class="num">2</div>
+      <div>
+        <span class="tag">Off-chain</span>
+        <h4>Your bot tries to use a paid service</h4>
+        <p class="what">It calls Anthropic (or any service that accepts x402). The service says: <i>"Cool, pay me $1 first."</i></p>
+      </div>
+      <div class="why"><b>Why this matters:</b> x402 is the new "pay-per-API-call" standard. Bots already use it. zBase plugs into it — no rewrites needed.</div>
+    </div>
+
+    <div class="lane zk">
+      <div class="num">3</div>
+      <div>
+        <span class="tag">The magic step</span>
+        <h4>zBase makes a math proof: "I have a deposit"</h4>
+        <p class="what">Takes about 2.5 seconds. The proof is real (Anthropic can verify it), but it doesn't reveal <i>which</i> deposit. It's the wristband, not your ID.</p>
+      </div>
+      <div class="why"><b>Why this works:</b> zero-knowledge proofs are 30-year-old math. Same tech used in Vitalik Buterin's privacy research. We didn't invent it — we packaged it.</div>
+    </div>
+
+    <div class="lane private">
+      <div class="num">4</div>
+      <div>
+        <span class="tag">Private settlement</span>
+        <h4>The pool pays Anthropic. Your bot's name is nowhere.</h4>
+        <p class="what">On the public ledger it reads <i>"the pool paid Anthropic $1."</i> Not "your bot paid." The link is broken.</p>
+      </div>
+      <div class="why"><b>The result:</b> wallet trackers see the pool moving. They can't see you. Your strategy stays yours.</div>
+    </div>
+
+    <div class="lane yield">
+      <div class="num">5</div>
+      <div>
+        <span class="tag">Bonus</span>
+        <h4>While your money sits, it earns interest</h4>
+        <p class="what">Idle deposits get lent out automatically (to Kamino on Solana, Morpho on Base). You earn around 4–9% APY — for free, while you wait.</p>
+      </div>
+      <div class="why"><b>Why nobody else does this:</b> we wrote the contract to handle it. Other privacy tools just let money sit. We make it work for you.</div>
+    </div>
+  </div>
+
+  <!-- BEFORE / AFTER -->
+  <h2 class="section">What a watcher sees</h2>
+  <div class="compare">
+    <div class="cmp bad">
+      <h3><span class="em">😱</span>Without zBase</h3>
+      <p class="sub">Standard crypto payment. Open billboard.</p>
+      <div class="receipt">
+<span class="lbl"># public ledger, block 461358659</span>
+<span class="lbl">From:</span> <span class="red">0xYourBot…7f2a</span>
+<span class="lbl">  To:</span> <span class="red">Anthropic …b1c4</span>
+<span class="lbl">Amount:</span> <b>1.00 USDC</b>
+<span class="lbl">Tag:</span> "AI inference"
+
+<span class="lbl">↳ indexed by 8 tracking bots ✗</span></div>
+      <div class="takeaway"><b>What they learn:</b> you're an AI customer, how often, how much, your patterns. Easy to copy.</div>
+    </div>
+    <div class="cmp good">
+      <h3><span class="em">🕶️</span>With zBase</h3>
+      <p class="sub">Same payment. Your name absent.</p>
+      <div class="receipt">
+<span class="lbl"># public ledger, block 461358923</span>
+<span class="lbl">From:</span> <span class="green">zBase pool …9eA1</span>
+<span class="lbl">  To:</span> <b>Anthropic …b1c4</b>
+<span class="lbl">Amount:</span> <b>1.00 USDC</b>
+<span class="lbl">Tag:</span> "valid proof ✓"
+
+<span class="lbl">↳ no link to your bot ✓</span></div>
+      <div class="takeaway"><b>What they learn:</b> someone in a crowd of hundreds paid Anthropic. Could be anyone. Strategy safe.</div>
+    </div>
+  </div>
+
+  <!-- AUDIENCES -->
+  <h2 class="section">Who actually needs this</h2>
+  <p class="audhdr">If you don't see yourself here, you probably don't need zBase yet. That's fine. Three tiers, sorted by how much it hurts <i>today</i>.</p>
+
+  <div class="aud">
+
+    <div class="person tier1">
+      <span class="avatar">🤖</span>
+      <div class="tier">Tier 1 · Hair on fire</div>
+      <h4>Trading bot operators</h4>
+      <p class="pain">Run automated strategies on Solana or Base. <b>Copy-trade bots watch their wallet in real time and clone every move.</b> Strategy goes from edge to commodity in hours.</p>
+      <p class="fix"><b>How zBase helps:</b> nobody sees which tokens you buy or sell. No copying, no front-running.</p>
+      <p class="examples">e.g. aignt.fun · AgentRunner · Tradecraft.finance</p>
+    </div>
+
+    <div class="person tier1">
+      <span class="avatar">⚡</span>
+      <div class="tier">Tier 1 · Hair on fire</div>
+      <h4>MEV searchers &amp; arbitrage bots</h4>
+      <p class="pain"><b>Their entire strategy is reverse-engineered by watching which DEXs and data feeds they pay.</b> Every cent of edge depends on staying invisible.</p>
+      <p class="fix"><b>How zBase helps:</b> payments to data providers and feeds become untraceable. The recipe stays secret.</p>
+      <p class="examples">e.g. mev-bot · hundreds of unlisted searchers</p>
+    </div>
+
+    <div class="person tier2">
+      <span class="avatar">🧠</span>
+      <div class="tier">Tier 2 · Feels the pinch</div>
+      <h4>AI companies running agents</h4>
+      <p class="pain">Their bots call LLMs, data APIs, analytics services via x402. <b>Competitors can see which AI stack they use, when, and how much they spend</b> — reveals the whole product strategy.</p>
+      <p class="fix"><b>How zBase helps:</b> nobody knows if you're using Claude, GPT, or Gemini. Or how heavily.</p>
+      <p class="examples">e.g. any team building on Pay.sh / Google Cloud agent APIs</p>
+    </div>
+
+    <div class="person tier2">
+      <span class="avatar">💼</span>
+      <div class="tier">Tier 2 · Feels the pinch</div>
+      <h4>Crypto fund managers</h4>
+      <p class="pain">Run DeFi agents for portfolio management. <b>Wallet trackers tag "smart money" wallets the moment they get identified</b> — and every trade becomes public.</p>
+      <p class="fix"><b>How zBase helps:</b> fund agents pay from the pool, not the fund wallet. Operational security restored.</p>
+      <p class="examples">e.g. crypto hedge funds · family offices · DAO treasuries</p>
+    </div>
+
+    <div class="person tier3">
+      <span class="avatar">🔗</span>
+      <div class="tier">Tier 3 · Coming soon</div>
+      <h4>Agent-to-agent commerce</h4>
+      <p class="pain">Agents buying services from other agents. <b>The whole supply chain is transparent — anyone can map who buys from whom.</b> Business relationships leaked by default.</p>
+      <p class="fix"><b>How zBase helps:</b> agent-to-agent payments stay private. Business partnerships stay yours.</p>
+      <p class="examples">e.g. CORBITS.DEV · Latinum Agentic Commerce · AI Economy Protocol</p>
+    </div>
+
+    <div class="person tier3">
+      <span class="avatar">🏛️</span>
+      <div class="tier">Tier 3 · Coming soon</div>
+      <h4>Enterprises &amp; institutions</h4>
+      <p class="pain">Banks, fintechs, traditional companies running on-chain agents. <b>On-chain payments are discoverable in litigation</b> and reveal competitive intel to anyone willing to look.</p>
+      <p class="fix"><b>How zBase helps:</b> compliant privacy (ASP) keeps regulators happy <i>and</i> hides competitive info.</p>
+      <p class="examples">e.g. enterprise Pay.sh adopters · Google Cloud customers</p>
+    </div>
+
+  </div>
+
+  <!-- FAQ -->
+  <h2 class="section">Questions you probably have</h2>
+  <div class="faq">
+    <div class="qa">
+      <p class="q">Is this like Tornado Cash? Will I get sanctioned?</p>
+      <p class="a">No. Tornado Cash had zero compliance — it let dirty money mix with clean money. zBase only accepts deposits from approved addresses (called an "ASP"). It's the design Vitalik Buterin co-authored specifically <i>because</i> Tornado got sanctioned. The US Treasury (March 2026) explicitly acknowledged that mixers have "legitimate privacy uses" when they're compliant. zBase is.</p>
+    </div>
+    <div class="qa">
+      <p class="q">Can my bot get its money back? What if I lose the secret?</p>
+      <p class="a">Yes — you withdraw the same way you pay, using your secret code. The secret stays in your local app (encrypted). Lose it and the money is stuck in the pool forever, same as losing your private key. Back it up.</p>
+    </div>
+    <div class="qa">
+      <p class="q">How do I plug it into my existing AI agent?</p>
+      <p class="a">Change one line. If your agent already speaks x402 (Coinbase's payment standard for bots), point its facilitator URL at zBase instead of Coinbase. That's it. No code rewrite, no SDK swap.</p>
+    </div>
+    <div class="qa">
+      <p class="q">What if the zBase server goes down?</p>
+      <p class="a">The pool lives on-chain (Solana + Base). Anyone can run a facilitator — the code is open source (Apache 2.0). If our server dies, you spin up your own, or use a community one. Your money is not on our server. Ever.</p>
+    </div>
+    <div class="qa">
+      <p class="q">Who's actually using this?</p>
+      <p class="a">Live on Solana devnet and Base Sepolia (testnet) today. Looking for 3 design partners — trading bots and AI agent fleets — for a 14-day mainnet pilot. The cryptography is production-ready (forked from 0xbow's audited Privacy Pools); the GTM is what's new.</p>
+    </div>
+    <div class="qa">
+      <p class="q">Why now?</p>
+      <p class="a">In one week (May 5–7): AWS launched payments for AI agents, Pay.sh launched on Solana with Google Cloud, x402 crossed $600M cumulative. Every one of those payments is public. The privacy layer wasn't built. We built it.</p>
+    </div>
+  </div>
+
+  <!-- CLOSER -->
+  <div class="closer">
+    <p class="big">One sentence: <span class="hi">your bot pays for stuff online without telling the whole internet what it's doing.</span></p>
+    <p>That's zBase. Built on math Vitalik co-authored. Open source. Live on Solana &amp; Base.</p>
+  </div>
+
+  <footer class="f">
+    zBase · github.com/goheesheng/zx402 · Apache 2.0
+  </footer>
+
+</div>
+</body>
+</html>

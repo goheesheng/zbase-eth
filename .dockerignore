@@ -1,0 +1,78 @@
+# Build-context filter for the root Dockerfile (Next.js app image).
+# Mirrors .vercelignore's intent: ship the app + packages/core + the two
+# live circuit dirs, exclude everything else.
+#
+# NOTE dockerignore negation differs from gitignore: re-including children
+# under an excluded parent DOES work here (unlike gitignore, where a parent
+# exclude can't be undone — the trap documented in .vercelignore). The
+# Dockerfile still asserts the circuit files exist post-build.
+
+.git
+.gitignore
+.env*
+*.log
+*.pem
+*.key
+.DS_Store
+.decoy-state
+.claude
+.vercel
+.gstack
+.superstack
+
+node_modules
+**/node_modules
+.next
+out
+build
+coverage
+*.tsbuildinfo
+
+# Heavy non-app trees (the Next app imports only packages/core)
+packages/svm
+packages/mcp
+sdk
+agents
+zbase-protocol
+contracts
+circuits
+lib
+broadcast
+cache
+artifacts-vendor
+docs
+sales
+skills
+markets
+demo
+test
+tests
+e2e
+scripts
+video
+marketing-video
+decks
+deck-export-canva
+deck-export-large
+data
+
+# Sibling deploy artifacts (x402-server has its own build context)
+x402-server
+deploy
+docker-compose.yml
+Dockerfile
+
+*.tar.gz
+*.zip
+zbase-architecture-diagram.html
+zbase-how-it-works-simple.html
+
+# Circuit artifacts: only withdraw/ + commitment/ (+ note_spend/, which
+# self-activates when ceremony artifacts land) are read at runtime.
+public/circuits/**
+public/circuit_artifacts
+public/zkeys
+public/decks
+!public/circuits/withdraw/**
+!public/circuits/commitment/**
+!public/circuits/note_spend/**

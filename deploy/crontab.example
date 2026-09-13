@@ -1,0 +1,13 @@
+# zBase host cron (install with `crontab -e` as the app operator).
+# The ASP refresh is idempotent: it screens/publishes new deposits, and does no
+# chain write when the approved root is already current.
+
+* * * * *       /srv/zbase/cron/cron-hit.sh mainnet asp-update    >> /srv/zbase/cron/cron.log 2>&1
+*/20 * * * *    /srv/zbase/cron/cron-hit.sh sepolia decoy         >> /srv/zbase/cron/cron.log 2>&1
+7-59/10 * * * * /srv/zbase/cron/cron-hit.sh sepolia indexer-sync  >> /srv/zbase/cron/cron.log 2>&1
+
+# On-box health monitor every five minutes.
+*/5 * * * *     /srv/zbase/cron/monitor.sh >> /srv/zbase/cron/monitor-cron.log 2>&1
+
+# Encrypted Redis snapshot daily at 04:00 UTC. Configure an off-box copy hook.
+0 4 * * *       /srv/zbase/cron/backup-redis.sh >> /srv/zbase/cron/backup.log 2>&1

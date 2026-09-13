@@ -1,0 +1,104 @@
+# zBase VPS stack — app (Next.js) + x402 (paid API) + caddy (TLS).
+# Runs on the Tencent Lighthouse box; deployed by deploy/deploy.sh.
+# One-time server prep + env file templates: deploy/README.md.
+name: zbase
+
+services:
+  app:
+    build:
+      context: .
+      args:
+        GIT_COMMIT_SHA: ${GIT_COMMIT_SHA:-unknown}
+        NEXT_PUBLIC_NETWORK: ${NEXT_PUBLIC_NETWORK:-sepolia}
+        NEXT_PUBLIC_BASE_SEPOLIA_RPC: ${NEXT_PUBLIC_BASE_SEPOLIA_RPC:-}
+        NEXT_PUBLIC_WALLETCONNECT_ID: ${NEXT_PUBLIC_WALLETCONNECT_ID:-}
+    image: zbase-app:latest
+    # Runtime secrets live on the box only — never in the rsynced tree.
+    env_file: /srv/zbase/.env
+    # Loopback-only publish: host cron target + on-box debugging. Also keeps
+    # Docker's iptables rules from bypassing ufw for this port.
+    ports:
+      - "127.0.0.1:3000:3000"
+    restart: unless-stopped
+    healthcheck:
+      # Process-alive semantics only (any HTTP response passes): /api/health
+      # legitimately returns 503 "degraded" on config gaps, and that should
+      # not restart-loop the container. deploy.sh asserts status:"ok".
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.status<600?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks: [web]
+
+  x402:
+    build:
+      context: ./x402-server
+    image: zbase-x402:latest
+    # SEPARATE env file — least privilege: this container never sees the
+    # postman key or seed-encryption key. And CDP keys must never land here
+    # on Sepolia: x402-server flips to Base MAINNET purely on their presence.
+    env_file: /srv/zbase/x402.env
+    volumes:
+      - x402_logs:/app/logs
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4020/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks: [web]
+
+  # Local Redis replacing Upstash (user decision 2026-07-12): the app speaks
+  # Upstash's REST protocol, so SRH bridges REST -> real Redis. Point
+  # UPSTASH_REDIS_REST_URL=http://srh:80 and set UPSTASH_REDIS_REST_TOKEN to
+  # SRH_TOKEN's value in /srv/zbase/.env. State (authz/premium records) lives
+  # in the redis_data volume — back it up before fees go live.
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks: [web]
+
+  srh:
+    # Community image in the money path — pinned by digest so a tag repush
+    # can't swap it. Update deliberately: docker pull, re-pin the new sha256.
+    image: hiett/serverless-redis-http:latest@sha256:5b0bb9239fce53abf87b2018a7a0deb9ec7bd900c5360738fe5fbeeb426f9150
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: ${SRH_TOKEN:?set SRH_TOKEN in /srv/zbase/.env}
+      SRH_CONNECTION_STRING: redis://redis:6379
+    restart: unless-stopped
+    depends_on: [redis]
+    networks: [web]
+
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data     # ACME certs persist across deploys
+      - caddy_config:/config
+    restart: unless-stopped
+    depends_on: [app, x402]
+    networks: [web]
+
+networks:
+  web:
+
+volumes:
+  x402_logs:
+  caddy_data:
+  caddy_config:
+  redis_data:

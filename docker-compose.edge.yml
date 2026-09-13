@@ -1,0 +1,34 @@
+# zBase edge — the single shared Caddy that fronts BOTH network projects.
+# Only one process can bind host :80/:443, so Caddy lives in its own project
+# and routes by hostname to the mainnet/sepolia containers over the external
+# `zbase-web` network. Holds NO secrets.
+#
+# Deploy: docker compose -p zbase-edge -f docker-compose.edge.yml up -d
+# Reload after a Caddyfile edit (the cutover mechanic — reversible in seconds):
+#   docker compose -p zbase-edge exec caddy caddy reload --config /etc/caddy/Caddyfile
+# (if reload doesn't pick up the mounted file: `... restart caddy`)
+name: zbase-edge
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    container_name: zbase-caddy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /srv/zbase/docs:/srv/docs:ro # static docs site (built by deploy/docs-deploy.sh)
+      - caddy_data:/data # ACME certs persist across deploys + across cutovers
+      - caddy_config:/config
+    restart: unless-stopped
+    networks: [zbase-web]
+
+networks:
+  zbase-web:
+    external: true
+
+volumes:
+  caddy_data:
+  caddy_config:

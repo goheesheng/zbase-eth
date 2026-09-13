@@ -1,0 +1,24 @@
+# Speed up Claude Code over hotspot/cellular by not scanning heavy files.
+# Local to this machine's Claude Code — does NOT affect git or the cloud env.
+
+# Build output + caches (the big wins on a hotspot)
+build/
+artifacts/
+.next/
+dist/
+out/
+
+# ZK circuit artifacts — the heaviest files in this repo
+# NOTE: with these ignored, Phase 4 (witness fixture / proving rewire) work that
+# needs to read public/circuits/*.zkey|*.wasm will require temporarily un-ignoring.
+public/circuits/
+*.zkey
+*.ptau
+*.wasm
+
+# Media + decks
+*.mp4
+*.png
+*.jpg
+*.jpeg
+*.pdf

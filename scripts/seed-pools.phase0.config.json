@@ -1,0 +1,23 @@
+{
+  "$schema": "./seed-pools.config.schema.json",
+  "_doc": "Phase 0 bootstrap config (founder self-funded). 30 deposits across 3 denoms = $1,600 USDC. Unblocks Base Sepolia push without waiting for Phase 1's $27,775 treasury/grant. Mix chosen: $10 x 10 + $50 x 10 + $100 x 10 — three distinct denoms give the anonymity-set early diversity at three settlement bands ($10 micro-payment, $50 typical agent call, $100 settlement). Phase 1 (seed-pools.config.json) follows once Base Ecosystem Fund matching capital lands. depositGapMs reduced to 3000 (vs Phase 1's 7500) since only 30 deposits — full run ~90s.",
+  "treasury": "0xcDB447c3a352AD8ADF3D8d97Da9a3CF91880b843",
+  "pools": [
+    {
+      "address": "0x4ebcfeaf661a25f103b3d1f16be5a7668ab0935a",
+      "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "assetDecimals": 6,
+      "label": "USDC (plain 0xbow pool, no yield) - Base Sepolia - Phase 0",
+      "denomCount": {
+        "10": 10,
+        "50": 10,
+        "100": 10
+      }
+    }
+  ],
+  "lockUntil": "2026-12-01T00:00:00Z",
+  "encryptedNotesPath": "data/seed-notes.phase0.encrypted.json",
+  "entrypoint": "0x598ffaac79ae29b1aae571fd91899d4492183688",
+  "chainId": 84532,
+  "depositGapMs": 3000
+}

@@ -1,0 +1,24 @@
+{
+  "$schema": "./seed-pools.config.schema.json",
+  "_doc": "Bootstrap anonymity-set config. Read by scripts/seed-pools.ts. Mirrors Vitalik's $113K personal seed of 0xbow Privacy Pools. denomCount is the number of independent commitments per denom (denoms are in whole USDC). The treasury address must hold enough USDC + ETH for fees before the script runs.",
+  "treasury": "0xcDB447c3a352AD8ADF3D8d97Da9a3CF91880b843",
+  "pools": [
+    {
+      "address": "0x4ebcfeaf661a25f103b3d1f16be5a7668ab0935a",
+      "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "assetDecimals": 6,
+      "label": "USDC (plain 0xbow pool, no yield) - Base Sepolia",
+      "denomCount": {
+        "1": 25,
+        "10": 25,
+        "100": 25,
+        "1000": 25
+      }
+    }
+  ],
+  "lockUntil": "2026-12-01T00:00:00Z",
+  "encryptedNotesPath": "data/seed-notes.encrypted.json",
+  "entrypoint": "0x598ffaac79ae29b1aae571fd91899d4492183688",
+  "chainId": 84532,
+  "depositGapMs": 7500
+}

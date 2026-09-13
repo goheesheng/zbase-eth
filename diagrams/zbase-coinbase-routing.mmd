@@ -1,0 +1,11 @@
+flowchart TD
+    Z["1. zBase: private funding"]
+    B["2. Bitrefill: standard x402"]
+    C["3. Coinbase: settle"]
+
+    Z -->|"Fresh payer signature"| B
+    B -->|"Verify + broadcast"| C
+
+    style Z fill:#e7eef8,stroke:#365f9f,color:#18191b
+    style B fill:#eef1f4,stroke:#7b8794,color:#18191b
+    style C fill:#f3ecff,stroke:#7357a5,color:#18191b

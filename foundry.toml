@@ -1,0 +1,95 @@
+# foundry.toml — multi-profile config to discover ThresholdEntrypoint artifacts
+#
+# 2026-05-31 fix (Option A from foundry-config-fix task):
+# The default profile keeps `src = contracts` + `test = contracts/test` so the
+# main Privacy Pool / yield test suite (PrivacyPoolMorphoYield, ThresholdEntrypoint,
+# etc.) continues to build and run unchanged.
+#
+# The ThresholdEntrypoint deploy script + its co-located deploy test live under
+# `zbase-protocol/pkg/contracts/` because that is the canonical home of the
+# zbase-protocol fork. Foundry only accepts a single `script` and a single
+# `test` path per profile, so we:
+#   1) Point the default profile's `script` at the new deploy script dir
+#      (there are no other .s.sol files at the repo root today, so this is a
+#      no-op for everything else).
+#   2) Add a `[profile.threshold]` profile that swaps `test` to the deploy
+#      test directory. Invoke with `FOUNDRY_PROFILE=threshold forge test`
+#      or `forge test --profile threshold ...` to run the deploy-shape test.
+#
+# This avoids symlinks (which the team has had paper-cuts with on macOS APFS)
+# and keeps every Solidity file in its original repo location.
+
+[profile.default]
+src = "contracts"
+out = "artifacts"
+test = "contracts/test"
+script = "zbase-protocol/pkg/contracts/script"
+libs = ["lib"]
+remappings = [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "forge-std/=lib/forge-std/src/",
+    "@zbase-protocol/=zbase-protocol/pkg/contracts/src/",
+    # On-chain Poseidon2 (PoseidonT3) for the UTXOPool LeanIMT. Sourced from the
+    # npm package poseidon-solidity@0.0.5 (pinned in package.json + lockfile);
+    # its PoseidonT3.sol is byte-identical (sha256 08a7493b...) to the canonical
+    # chancehudson/poseidon-solidity mirrors. Equivalence to poseidon-lite /
+    # circomlib (the JS + circuit hash) is asserted in UTXOPool.t.sol before any
+    # root depends on it.
+    "poseidon-solidity/=node_modules/poseidon-solidity/",
+]
+solc_version = "0.8.20"
+
+# Profile for the DeployThresholdEntrypoint deploy-shape test that lives in
+# the zbase-protocol package. Run with:
+#   FOUNDRY_PROFILE=threshold forge test --match-contract DeployThresholdEntrypoint -vv
+[profile.threshold]
+src = "contracts"
+out = "artifacts"
+test = "zbase-protocol/pkg/contracts/test"
+script = "zbase-protocol/pkg/contracts/script"
+libs = ["lib"]
+remappings = [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "forge-std/=lib/forge-std/src/",
+    "@zbase-protocol/=zbase-protocol/pkg/contracts/src/",
+    # On-chain Poseidon2 (PoseidonT3) for the UTXOPool LeanIMT. Sourced from the
+    # npm package poseidon-solidity@0.0.5 (pinned in package.json + lockfile);
+    # its PoseidonT3.sol is byte-identical (sha256 08a7493b...) to the canonical
+    # chancehudson/poseidon-solidity mirrors. Equivalence to poseidon-lite /
+    # circomlib (the JS + circuit hash) is asserted in UTXOPool.t.sol before any
+    # root depends on it.
+    "poseidon-solidity/=node_modules/poseidon-solidity/",
+]
+solc_version = "0.8.20"
+
+# Profile to build the vendored 0xbow Privacy Pools contracts (the single-value
+# pool deployed live on Sepolia; vendored to deploy the SAME contract on Base
+# mainnet — 0xbow is not on Base). Apache-2.0, unmodified upstream — see
+# src/vendor/0xbow/{LICENSE,README.md}. Run with:
+#   FOUNDRY_PROFILE=vendor forge build
+# Deploy (operator, funded key): script/DeployMainnetPool.s.sol (see Stage docs).
+# Slim: oz + poseidon reuse the repo's existing lib/ + node_modules (NOT
+# duplicated); only oz-upgradeable + lean-imt are vendored (genuinely missing).
+[profile.vendor]
+src = "zbase-protocol/pkg/contracts/src/vendor/0xbow/contracts"
+out = "artifacts-vendor"
+test = "zbase-protocol/pkg/contracts/src/vendor/0xbow/_no_tests"
+script = "zbase-protocol/pkg/contracts/src/vendor/0xbow/script"
+libs = ["lib"]
+solc_version = "0.8.28"
+remappings = [
+    # 0xbow's own internal prefixes → the vendored tree
+    "contracts/=zbase-protocol/pkg/contracts/src/vendor/0xbow/contracts/",
+    "interfaces/=zbase-protocol/pkg/contracts/src/vendor/0xbow/interfaces/",
+    # genuinely-missing deps → vendored
+    "@oz-upgradeable/=zbase-protocol/pkg/contracts/src/vendor/0xbow/deps/oz-upgradeable/",
+    "lean-imt/=zbase-protocol/pkg/contracts/src/vendor/0xbow/deps/lean-imt/",
+    # deps we ALREADY have → reuse (no duplication)
+    "@oz/=lib/openzeppelin-contracts/contracts/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "poseidon/=node_modules/poseidon-solidity/",
+    "poseidon-solidity/=node_modules/poseidon-solidity/",
+    "forge-std/=lib/forge-std/src/",
+]
+
+# See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

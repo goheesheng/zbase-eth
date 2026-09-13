@@ -1,0 +1,21 @@
+# zBase decoy scheduler watchdog — cron template
+#
+# Install with:
+#   crontab -l > /tmp/cron.bak && cat scripts/decoy-watchdog.cron >> /tmp/cron.bak && crontab /tmp/cron.bak
+#
+# Verify with:
+#   crontab -l | grep decoy-watchdog
+#
+# Logs go to .decoy-state/watchdog.log inside the repo. The webhook URL must
+# be set inline below (cron does NOT inherit your shell .env) or you can
+# `source .env.local` from a wrapper script.
+#
+# Edit REPLACE_ME_REPO_PATH to the absolute path of this checkout, e.g.
+# /Users/you/zx402 or /opt/zbase/zx402.
+
+ZBASE_DECOY_WEBHOOK=YOUR_WEBHOOK_URL_HERE
+ZBASE_DECOY_MAX_AGE_SEC=21600
+
+# Every 15 minutes — well under the 6-hour staleness threshold so we get at
+# least 24 chances to alert before falling outside the SLA window.
+*/15 * * * * cd REPLACE_ME_REPO_PATH && ./scripts/decoy-watchdog.sh --once --quiet >> .decoy-state/watchdog.log 2>&1

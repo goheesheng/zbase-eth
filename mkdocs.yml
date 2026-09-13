@@ -1,0 +1,154 @@
+site_name: zBase Docs
+site_url: https://docs.zbase.app
+site_description: Private x402 payments on Base — deposit once, pay any API privately from a pool.
+
+# GitHub is intentionally HIDDEN until the repo is open-sourced. To re-enable the top-right repo
+# link + per-page "edit" button, uncomment the three lines below and the social icon in `extra`.
+# repo_url: https://github.com/goheesheng/zBase
+# repo_name: goheesheng/zBase
+# edit_uri: edit/main/docs/gitbook/
+
+# Reuse the existing markdown in place — no duplication. README.md is the home page.
+docs_dir: docs/gitbook
+site_dir: site
+
+# SUMMARY.md is GitBook-only nav; openapi.yaml is a data asset served for the API playground.
+exclude_docs: |
+  SUMMARY.md
+
+# Link validation is WARN, not fatal: pre-existing GitBook cross-links point at internal planning
+# docs outside the docs root (dead in GitBook too). New pages' links all resolve.
+validation:
+  omitted_files: warn
+  absolute_links: ignore
+  unrecognized_links: warn
+  links:
+    not_found: warn
+    anchors: warn
+  nav:
+    omitted_files: warn
+    not_found: warn
+
+theme:
+  name: material
+  logo: assets/zbase_logo.png
+  favicon: assets/favicon-32.png
+  font:
+    text: Inter
+    code: Roboto Mono
+  palette:
+    # Ondo-style: white header, near-black type, one muted-blue accent. Colors live in
+    # assets/stylesheets/ondo.css (primary/accent = custom so CSS variables win).
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+  features:
+    # No navigation.tabs and no navigation.sections: each top-level section renders as a
+    # COLLAPSIBLE dropdown in the left sidebar, collapsed by default (click a header to expand).
+    # This keeps the sidebar short instead of showing every page at once.
+    - navigation.top
+    - navigation.instant
+    - navigation.tracking
+    - navigation.prune
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+    - content.tabs.link
+
+# Custom assets are NOT content-hashed by Material (unlike its own bundle), so returning
+# visitors' browsers cache them by plain filename. BUMP the ?v= number whenever you edit
+# ondo.css or diagram-zoom.js — otherwise the stale cached copy keeps running.
+extra_css:
+  - assets/stylesheets/ondo.css?v=3
+
+extra_javascript:
+  - assets/javascripts/diagram-zoom.js?v=3
+
+# Adding a `plugins:` block disables the implicit default [search], so `search` is
+# re-listed explicitly. `redirects` 301s the old testnet-era slug to the mainnet
+# facilitator page so live docs.zbase.app links don't 404 after the rename.
+plugins:
+  - search
+  - redirects:
+      redirect_maps:
+        base-sepolia-private-x402.md: x402-facilitator.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - footnotes
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.inlinehilite
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.snippets
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+
+extra:
+  social: []
+  # To re-enable the GitHub icon after open-sourcing, replace `social: []` above with:
+  # social:
+  #   - icon: fontawesome/brands/github
+  #     link: https://github.com/goheesheng/zBase
+
+nav:
+  - Getting Started:
+      - Introduction: README.md
+      - Install zBase: install-mcp.md
+      - How zBase works (diagrams): diagram.md
+      - Pay privately in 5 minutes: pay-privately-quickstart.md
+      - "Proven: a $0.001 payment": proven-private-pay-full-flow.md
+      - Concepts & glossary: concepts-glossary.md
+  - zBase:
+      - How zBase compares: how-zbase-compares.md
+      - Why a facilitator on Base: why-base-facilitator.md
+      - The two gates: two-gates.md
+      - How the money flows: how-the-money-flows.md
+      - System architecture: system-architecture.md
+      - Architecture problems & solutions: architecture-problems-solutions.md
+      - The cryptographic core: cryptographic-core.md
+      - The x402 facilitator: x402-facilitator.md
+      - Facilitator metadata hygiene: metadata-hygiene.md
+  - Tools:
+      - Developer Guides: developer-guides.md
+      - Integrate zBase as your facilitator: use-zbase-as-facilitator.md
+      - Pay privately from an agent (SDK): sdk-overview.md
+      - Privacy Pool notes: sdk-privacy-pool-notes.md
+      - Merkle tree & proofs: sdk-merkle-tree-proofs.md
+      - Receive payments (stealth): stealth-recipients.md
+      - Wallet backend API: wallet-backend-api.md
+      - API overview & error codes: api-reference.md
+      - Live API playground: api.md
+  - Smart Contract Address:
+      - Contract addresses: contract-addresses.md
+      - Contracts reference: contracts-reference.md
+      - Circuits reference: circuits-reference.md
+  - Enterprise: pricing.md
+  - Security & Project:
+      - Trust model: trust-model.md
+      - Threat model: threat-model.md
+      - Roadmap: build-roadmap.md
+      - FAQ: faq.md

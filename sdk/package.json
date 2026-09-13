@@ -1,0 +1,35 @@
+{
+  "name": "@zbase-protocol/sdk",
+  "version": "0.2.0",
+  "description": "Legacy local zBase SDK snapshot. Use @zbase-protocol/core for the maintained Base facilitator client.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": ["dist", "src"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "viem": "^2.48.1",
+    "poseidon-lite": "^0.3.0",
+    "@zk-kit/lean-imt": "^2.2.4",
+    "snarkjs": "^0.7.6"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/goheesheng/zBase",
+    "directory": "sdk"
+  },
+  "keywords": ["privacy", "zk", "base", "x402", "agents", "groth16", "zbase"]
+}

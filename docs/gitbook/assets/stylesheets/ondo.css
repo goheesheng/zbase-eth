@@ -1,0 +1,269 @@
+/*
+ * ondo.css — institutional-finance docs skin for MkDocs Material, derived from docs.ondo.finance.
+ *
+ * Design language (sampled from Ondo): Inter throughout, white background, near-black type, ONE
+ * muted-blue accent (#365F9F) used with restraint, a quiet gray sidebar with a faint-pill active
+ * item, hairline rules, generous whitespace. The blue is the only color; everything else is
+ * grayscale calm. Dark mode keeps the same structure with a lightened accent for contrast.
+ */
+
+/* ── Light scheme tokens ─────────────────────────────────────────────────── */
+[data-md-color-scheme="default"] {
+  --zb-ink: #18191b;        /* headings, near-black */
+  --zb-body: #35373c;       /* body text */
+  --zb-muted: #6f7276;      /* sidebar / secondary */
+  --zb-accent: #365f9f;     /* Ondo muted blue */
+  --zb-accent-strong: #294a80;
+  --zb-rule: #e7e8ea;       /* hairlines */
+  --zb-pill: #f2f3f5;       /* active nav / hover / code bg */
+  --zb-surface: #ffffff;
+
+  /* Header: white with dark text (Ondo). */
+  --md-primary-fg-color: #ffffff;
+  --md-primary-fg-color--light: #ffffff;
+  --md-primary-fg-color--dark: #ffffff;
+  --md-primary-bg-color: var(--zb-ink);
+  --md-primary-bg-color--light: var(--zb-muted);
+
+  /* Accent + links. */
+  --md-accent-fg-color: var(--zb-accent-strong);
+  --md-typeset-a-color: var(--zb-accent);
+
+  --md-default-fg-color: var(--zb-body);
+  --md-default-fg-color--light: var(--zb-muted);
+  --md-default-fg-color--lighter: #9a9da1;
+  --md-default-bg-color: var(--zb-surface);
+  --md-typeset-color: var(--zb-body);
+}
+
+/* ── Dark scheme tokens (same structure, lifted for contrast) ────────────── */
+[data-md-color-scheme="slate"] {
+  --zb-ink: #f3f4f6;
+  --zb-body: #c9ccd1;
+  --zb-muted: #8a8f96;
+  --zb-accent: #7ea6dc;
+  --zb-accent-strong: #a6c4ea;
+  --zb-rule: #23262b;
+  --zb-pill: #1a1d21;
+  --zb-surface: #0e0f11;
+
+  --md-primary-fg-color: #0e0f11;
+  --md-primary-fg-color--light: #0e0f11;
+  --md-primary-fg-color--dark: #0e0f11;
+  --md-primary-bg-color: var(--zb-ink);
+  --md-primary-bg-color--light: var(--zb-muted);
+
+  --md-accent-fg-color: var(--zb-accent-strong);
+  --md-typeset-a-color: var(--zb-accent);
+
+  --md-default-fg-color: var(--zb-body);
+  --md-default-fg-color--light: var(--zb-muted);
+  --md-default-bg-color: var(--zb-surface);
+  --md-typeset-color: var(--zb-body);
+}
+
+/* ── Header: thin, white, hairline underline (no shadow) ─────────────────── */
+.md-header {
+  border-bottom: 1px solid var(--zb-rule);
+  box-shadow: none;
+  color: var(--zb-ink);
+}
+.md-header--shadow { box-shadow: none; }
+.md-header__title { font-weight: 600; letter-spacing: -0.01em; }
+.md-logo img { max-height: 2.2rem; width: auto; }
+
+/* Search as a soft rounded pill (Ondo). */
+.md-search__form {
+  border-radius: 10px;
+  background: var(--zb-pill);
+  box-shadow: none;
+}
+[data-md-color-scheme="default"] .md-search__input { color: var(--zb-ink); }
+.md-search__input::placeholder { color: var(--zb-muted); }
+
+/* ── Global scale: shrink Material's 20px root toward Ondo's ~16px feel so the whole
+ *    chrome (header, sidebar, spacing) is as compact as docs.ondo.finance. Body is bumped
+ *    back to ~16px on the smaller root. Everything below is sized in rem against this. ── */
+html { font-size: 112.5%; }   /* 18px root (Material default is 125% / 20px) */
+
+/* ── Typography: Inter, tight near-black headings, comfortable body ──────── */
+.md-typeset {
+  font-size: 0.9rem;          /* ~16px body, like Ondo */
+  font-feature-settings: "kern", "liga", "cv05", "ss01";
+  line-height: 1.7;
+}
+/* Type scale matched to Ondo (root is 20px in Material, so rem values are ×20). */
+.md-typeset h1 {
+  color: var(--zb-ink);
+  font-weight: 600;          /* Ondo weight */
+  font-size: 2rem;           /* 36px on the 18px root */
+  letter-spacing: -0.02em;
+  line-height: 1.18;
+  margin: 0 0 0.35em;
+}
+.md-typeset h2 {
+  color: var(--zb-ink);
+  font-weight: 600;
+  font-size: 1.45rem;        /* ~26px */
+  letter-spacing: -0.014em;
+  margin-top: 2em;
+  padding-top: 1em;
+  border-top: 1px solid var(--zb-rule);   /* quiet section divider, Ondo-like */
+}
+.md-typeset h3 { color: var(--zb-ink); font-weight: 600; font-size: 1.15rem; letter-spacing: -0.008em; }
+.md-typeset h1 + p { color: var(--zb-muted); font-size: 1rem; }  /* lede under the title (~18px) */
+
+/* Links: blue, underline only on hover (restraint). */
+.md-typeset a { text-decoration: none; }
+.md-typeset a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── Left sidebar: quiet gray, bold section labels, faint-pill active item ── */
+.md-nav { font-size: 0.78rem; }   /* ~14px on the 18px root, like Ondo */
+.md-nav__item .md-nav__link { color: var(--zb-muted); font-size: 0.78rem; border-radius: 8px; padding: 0.34em 0.6em; }
+.md-nav__link:hover { color: var(--zb-ink); background: var(--zb-pill); }
+.md-nav__link--active,
+.md-nav__link[data-md-state="active"] {
+  color: var(--zb-ink);
+  font-weight: 600;
+  background: var(--zb-pill);
+}
+/* Section group labels (the collapsible dropdown headers) — bold near-black. */
+.md-nav__item--section > .md-nav__link,
+.md-nav--primary > .md-nav__title {
+  color: var(--zb-ink);
+  font-weight: 680;
+  letter-spacing: -0.005em;
+}
+.md-nav--primary .md-nav__title { font-size: 0.8rem; }
+
+/* ── Rules, tables: hairline, no heavy fills ─────────────────────────────── */
+.md-typeset hr { border-bottom: 1px solid var(--zb-rule); }
+.md-typeset table:not([class]) {
+  border: 1px solid var(--zb-rule);
+  border-radius: 10px;
+  overflow: hidden;
+  font-size: 0.82rem;
+}
+.md-typeset table:not([class]) th {
+  background: var(--zb-pill);
+  color: var(--zb-ink);
+  font-weight: 620;
+}
+.md-typeset table:not([class]) td { border-top: 1px solid var(--zb-rule); }
+
+/* ── Code: soft rounded, light surface ───────────────────────────────────── */
+.md-typeset code {
+  background: var(--zb-pill);
+  border-radius: 5px;
+  font-size: 0.82em;
+  padding: 0.14em 0.36em;
+}
+.md-typeset pre > code {
+  border-radius: 10px;
+  border: 1px solid var(--zb-rule);
+}
+.highlight { border-radius: 10px; }
+
+/* ── Admonitions / details: hairline, rounded, restrained ────────────────── */
+.md-typeset .admonition,
+.md-typeset details {
+  border: 1px solid var(--zb-rule);
+  border-left-width: 3px;
+  border-radius: 10px;
+  box-shadow: none;
+  font-size: 0.86rem;
+}
+.md-typeset .admonition-title { background: transparent; font-weight: 640; }
+.md-typeset .note > .admonition-title,
+.md-typeset .note { border-left-color: var(--zb-accent); }
+
+/* ── Buttons / tabs: the blue accent as the only pop ─────────────────────── */
+.md-typeset .md-button {
+  border-radius: 10px;
+  border: 1px solid var(--zb-rule);
+  color: var(--zb-ink);
+  font-weight: 600;
+}
+.md-typeset .md-button--primary {
+  background: var(--zb-accent);
+  border-color: var(--zb-accent);
+  color: #fff;
+}
+
+/* Table of contents (right rail): quiet, blue active marker. */
+.md-nav--secondary .md-nav__link--active { color: var(--zb-accent); font-weight: 600; }
+
+/* Footer: minimal. */
+.md-footer { background: var(--zb-surface); color: var(--zb-muted); border-top: 1px solid var(--zb-rule); }
+.md-footer-meta { background: transparent; }
+.md-copyright { color: var(--zb-muted); }
+
+/* Tighten the reading measure a touch — institutional docs breathe. */
+.md-grid { max-width: 68rem; }
+
+/* Comparison matrix — Ondo look + a highlighted zBase row so 'best' reads at a glance. */
+.md-typeset table.zb-compare {
+  display: table;
+  width: 100%;
+  border: 1px solid var(--zb-rule);
+  border-radius: 10px;
+  border-collapse: separate;
+  border-spacing: 0;
+  overflow: hidden;
+  font-size: 0.82rem;
+  text-align: center;
+}
+.md-typeset table.zb-compare th,
+.md-typeset table.zb-compare td {
+  border-top: 1px solid var(--zb-rule);
+  padding: 0.6em 0.5em;
+}
+.md-typeset table.zb-compare thead th {
+  background: var(--zb-pill);
+  color: var(--zb-ink);
+  font-weight: 620;
+  border-top: 0;
+  vertical-align: top;
+}
+.md-typeset table.zb-compare th:first-child,
+.md-typeset table.zb-compare td:first-child { text-align: left; }
+.md-typeset table.zb-compare small {
+  display: block;
+  color: var(--zb-muted);
+  font-weight: 400;
+  font-size: 0.72em;
+  margin-top: 2px;
+  line-height: 1.25;
+}
+.md-typeset table.zb-compare .zb-row { background: rgba(54, 95, 159, 0.12); }
+.md-typeset table.zb-compare .zb-row td { font-weight: 700; color: var(--zb-ink); }
+.md-typeset table.zb-compare .zb-row td:first-child { box-shadow: inset 3px 0 0 var(--zb-accent); }
+
+/* Mermaid diagrams: a padded, breathable "card" so they don't feel cramped, and
+   render at their natural size (comfortable node/label spacing) — a diagram wider
+   than the column scrolls inside its own card rather than being crushed to fit. */
+.md-typeset .mermaid {
+  text-align: center;
+  margin: 2.5em auto;
+  padding: 1.75rem 1.5rem;
+  background: var(--zb-surface);
+  border: 1px solid var(--zb-rule);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+.md-typeset .mermaid svg {
+  display: block;
+  margin: 0 auto;
+  height: auto;
+  /* Scale diagrams UP to fill the card instead of Mermaid's small intrinsic width.
+     Mermaid sets an inline `max-width: <natural>px` on the svg, so !important is
+     required to beat it; width:100% then grows the diagram (and its labels) to the
+     full card width. A diagram naturally wider than the card still fits via the
+     card's overflow-x scroll. */
+  width: 100%;
+  max-width: none !important;
+}
+/* NOTE: the diagram-lightbox styles (.mz-*) now live in assets/javascripts/diagram-zoom.js
+   (injected at runtime) so the overlay can never be left invisible by a stale/cached copy of
+   THIS stylesheet — the styles travel with the script. Do not re-add them here. */
+.md-typeset .mermaid { cursor: zoom-in; }

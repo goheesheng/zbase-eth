@@ -1,0 +1,8 @@
+{
+  "comment": "Example ASP policy. Either remove the allowDepositors line entirely (= approve all) or restrict to a known set. denyDepositors and denyLabels are always taken into account.",
+  "allowDepositors": [
+    "BWTaGJeK2WNYXjfXuVYRf7Xt7a4CkT1kfuqsiB4Nh6H8"
+  ],
+  "denyDepositors": [],
+  "denyLabels": []
+}

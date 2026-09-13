@@ -1,0 +1,253 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+*.key
+
+# private business docs — NEVER commit (per CLAUDE.md / memory rule)
+incubator-application-answers-*.md
+pitch-deck-*.html
+pitch-deck-*.pdf
+*-pitch-deck*.pdf
+zBase-pitch-deck*.pdf
+zx402-pitch-deck*.pdf
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files — ignore every variant, including local-only templates
+.env*
+
+# anvil local fork harness (scripts/anvil-fork-sepolia.sh)
+.anvil-fork.pid
+.anvil-fork.log
+.env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+
+# hardhat
+cache/
+artifacts/
+typechain-types/
+.gstack/
+
+# workspace package build outputs + nested deps
+packages/*/dist/
+packages/*/node_modules/
+packages/*/package-lock.json
+packages/svm/*/dist/
+packages/svm/*/node_modules/
+packages/svm/*/logs/
+packages/svm/zx402-privacy-pool/target/
+packages/svm/zx402-privacy-pool/Cargo.lock
+
+# stale top-level sdk dir (pre-workspace layout)
+/sdk/dist/
+/sdk/node_modules/
+/sdk/package-lock.json
+
+# session memory + scratch artifacts
+.superstack/
+
+# demo state (per-developer; recreate via `npm run demo:bootstrap`)
+/scripts/.demo-pool.json
+
+# Anonymity-set seed notes (Shipment B.3) — encrypted, but never commit
+/data/seed-notes*.json
+/data/seed-notes*.encrypted.json
+
+# Remotion video — track source, ignore build outputs + deps
+/video/*/out/
+/video/*/node_modules/
+/video/*/.cache/
+
+# Dev-loop screenshots + playwright + design-audit scratch dirs (repo root only)
+/.playwright-mcp/
+/.design-audit/
+/all-index.png
+/banner-*.png
+/concept-*.png
+/final-*.png
+/finalist-*.png
+/font-*.png
+/glitch-*.png
+/mono-*.png
+/new-logo*.png
+/pixel-*.png
+/pop-*.png
+/v[0-9]-*.png
+/v[0-9]*-*.png
+
+# zBase runtime artifacts (generated, never committed)
+data/seed-phase0-run-*.log
+data/seed-notes.encrypted.json
+data/seed-notes.phase0.encrypted.json
+data/seed-notes.staging.encrypted.json
+data/seed-staging-run-*.log
+data/pre-push-smoke-*.log
+data/pre-push-smoke-staging-*.log
+data/providers.json
+.decoy-state/
+
+# Local Claude Code state — never commit
+.claude/
+
+# Sensitive outreach drafts + ceremony prep that name real people
+# (Coinbase / OpenAI / Anthropic contacts, threshold ASP signer candidates,
+# ceremony anchor verification + drafts). These stay LOCAL — putting them in
+# a public repo would make those people Google-findable as zBase prospects.
+docs/bd/
+docs/ceremony/
+docs/governance/
+docs/sales/exposure-audit/
+docs/trusted-setup-ceremony-options-2026-05-31.md
+
+
+# === Pitch / hackathon ephemera (deleted 2026-06-01) ===
+# Listed here so any branch cherry-pick that re-introduces them stays
+# untracked in the working tree.
+PITCH.md
+PITCH_CARD.md
+PITCH_TEST.md
+DEMO.md
+DEMO_RECORDING_SCRIPT.md
+DEMO_VIDEO_SCRIPT.md
+LOOM_SCRIPT.md
+SUBMISSION.md
+# TARGET_AUDIENCES.md and INTRO.md retained — INTRO is referenced from
+# contracts/PrivacyPoolMorpho.sol:52, TARGET_AUDIENCES is referenced from
+# the sales/ tree. Patch those before deleting either.
+
+# Foundry deploy artifacts from the staging-stack deploy (2026-06-01).
+# Broken deploy — ThresholdEntrypoint is ASP-governance, not a deposit
+# contract. Re-deploy will create new artifacts in these dirs; the old ones
+# are not load-bearing.
+/broadcast/DeployStaging.s.sol/
+/cache/DeployStaging.s.sol/
+
+# Session-artifact screenshots (NetworkStackBanner, TryWithoutWallet, pitch
+# deck, /app variants). These are throwaway debugging captures, not source.
+# Pattern matches the names Playwright + manual captures use throughout the
+# repo root.
+/*.png
+!brand.png
+!logo.png
+
+# Build-time copy of the pitch deck. The canonical source lives at
+# decks/zbase-pitch-2026-06-02.html; public/decks/ is generated whenever the
+# deck needs to be served via the Next dev server. Don't track the copy.
+/public/decks/
+
+# Marketing video (Remotion scaffold). WIP — clip components not yet written.
+# Kept local until the project actually builds end-to-end.
+/marketing-video/
+
+# Pitch decks (investor materials — explicit founder rule, never commit)
+# decks/zbase-pitch-2026-06-02.html lives locally only. /public/decks/ build
+# copy is handled above; this rule covers the canonical source tree.
+/decks/
+
+# Top-level sales/ directory — GTM strategy, outbound DM drafts, named
+# prospect handles, SAN Foundation outreach context, ICP segmentation.
+# Originally tracked (mistake); removed from tracking 2026-06-03 as part
+# of pre-public-flip cleanup. Putting these in a public repo would (a)
+# expose named X.com handles paired with our "wedge" strategy for them,
+# (b) hand competitors our complete GTM playbook. STAYS LOCAL.
+/sales/
+
+# Decoy scheduler burn-address list. Tracking this file would NULLIFY the
+# A.2 decoy-scheduler privacy benefit — a chain analyst who reads it can
+# pre-label every decoy destination in their graph and subtract decoys
+# from real flow. Removed from tracking 2026-06-03 as part of
+# pre-public-flip cleanup. MUST stay local; will move to zbase-platform
+# private repo as part of the OSS split.
+/scripts/burn-addresses.json
+.env.local.backup-*
+
+# vendored-0xbow forge build output
+artifacts-vendor/
+
+# Forwarding engine runtime state (audit #7 — dedupe + scan cursor)
+data/forwarding-engine-state.json
+
+# Forge broadcast artifacts (dry-run + real; contain sensitive run metadata)
+broadcast/
+
+# Grant application answers — NEVER commit (founder-private)
+orangedao-application-answers-*.md
+alliance-application-answers-*.md
+
+# Local working notes — may contain payment artifacts; never ship to the box.
+# NOT llm.txt: that is a TRACKED public agent guide (added on main in ab3f324).
+# Only untracked local scratch belongs below.
+/agent-private-pay-mainnet.txt
+/introduce-facilitator.txt
+/site/
+.venv-docs/
+
+# ── Founder-private research — NEVER push (added 2026-08-06) ──────────────────
+# Market/acquirer/competitor research and its raw source dumps. Two reasons to
+# keep these local: (1) they name acquisition targets, prospects and pricing
+# strategy — the same reasoning as the /sales block above; (2) the scraped
+# source trees are large (x402scan-source ~39MB, .research_sources ~3MB) and
+# would permanently bloat the repo if a `git add -A` ever caught them.
+/x402scan-source/
+/.research_sources/
+/acquirer-research.md
+/agentic-commerce-coverage-gap-assessment.md
+/privacy_sensitive_agentic_commerce_research.md
+/x402-market-evidence.md
+# Citation manifests emitted alongside the research above. Two naming schemes are
+# in use (`x-citations.json` and `.citations-x.json`) — both globbed.
+/*-citations.json
+/.citations-*.json
+/.context/*-citations.json
+/.context/codex-session-id
+
+# The research working tree: briefs, scraped HTML/PDF sources, DefiLlama pulls.
+/research/
+/api-migration-assurance-research.md
+/regulated-api-upgrade-assurance-brief.md
+# Forward-looking globs so the next brief lands ignored by default (root only).
+/*-research.md
+/*-brief.md
+/*-assessment.md
+
+# Python scratch from the research fetcher
+__pycache__/
+*.pyc
+
+# Strategy docs are now local-only. NOTE THE SPLIT: 21 files here were committed
+# before this rule and REMAIN TRACKED — .gitignore does not untrack anything.
+# Everything new under docs/strategy/ is ignored from 2026-08-06 onward. To also
+# untrack the historical 21, that needs an explicit `git rm --cached` decision.
+/docs/strategy/

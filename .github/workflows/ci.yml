@@ -1,0 +1,100 @@
+name: CI
+
+# Enforcement layer (2026-07-09): the fund-safety regression suite + contract
+# tests + build must pass on every push and PR. This is what turns "verified by
+# hand today" into "the build fails if anyone re-breaks a security fix". Each
+# prior audit found something the last missed, so these checks are non-optional.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+# Cancel in-progress runs for the same ref when a new commit lands.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fund-safety-tests:
+    name: Fund-safety regression suite
+    runs-on: ubuntu-latest
+    steps:
+      # audit-regression.sh runs `forge test` (executor contracts) AS ITS FIRST
+      # STEP, then the tsx fund-safety tests. So this job needs BOTH Foundry (+
+      # git submodules for forge-std/openzeppelin) AND Node — not just Node.
+      # (First CI cut only had Node → `forge: command not found`, 2026-07-09.)
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - name: Install Foundry (audit-regression.sh's first step is forge test)
+        uses: foundry-rs/foundry-toolchain@v1
+      - name: Install
+        run: npm ci
+      - name: Build SDK (core) — needed by the tsx tests
+        run: npm run build -w @zbase-protocol/core
+      - name: Run the fund-safety regression suite (65 tests, 10 groups)
+        run: bash scripts/audit-regression.sh
+      - name: npm audit (core package — must stay 0 high/critical)
+        working-directory: packages/core
+        run: npm audit --audit-level=high
+
+  contracts:
+    name: Contract tests (forge)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      # The vendored 0xbow contracts import Poseidon from the `poseidon-solidity`
+      # NPM package (remapped `poseidon-solidity/=node_modules/poseidon-solidity/`),
+      # so node_modules MUST exist before `forge build` — otherwise
+      # PoseidonT3/PoseidonT4.sol don't resolve and the build fails. (This step
+      # was missing in the first CI cut, 2026-07-09.)
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - name: Install node deps (provides poseidon-solidity for forge remappings)
+        run: npm ci
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+      - name: forge build
+        run: FOUNDRY_PROFILE=vendor forge build
+      - name: forge test (executor + threshold + yield)
+        run: forge test -vv
+
+  app-build:
+    name: Next build + SDK typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - name: Install
+        run: npm ci
+      - name: SDK typecheck
+        run: npx tsc -p packages/core/tsconfig.json --noEmit
+      - name: Next production build
+        run: npm run build
+
+  sdk-fresh-install:
+    name: SDK fresh-install (undeclared-dep guard)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - name: Install
+        run: npm ci
+      - name: Pack + install SDK outside the monorepo, verify imports
+        run: npx tsx scripts/test-sdk-fresh-install.ts

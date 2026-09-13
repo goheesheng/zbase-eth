@@ -1,0 +1,84 @@
+################################################################################
+# zBase Decoy Scheduler — systemd unit (Linux only)
+#
+# Long-running launcher for scripts/decoy-scheduler.ts. Poisson-scheduled dummy
+# withdrawals from the postman wallet to deterministic burn addresses to defeat
+# the FIFO temporal de-anonymization heuristic (arXiv 2510.09433).
+#
+# Setup (one-time, as root on the host):
+#   1. Edit the placeholders below (search for REPLACE_ME).
+#   2. sudo cp scripts/decoy-scheduler.service /etc/systemd/system/zbase-decoy.service
+#   3. sudo touch /var/log/zbase-decoy.log && sudo chown zbase:zbase /var/log/zbase-decoy.log
+#   4. sudo systemctl daemon-reload
+#   5. sudo systemctl enable --now zbase-decoy.service
+#
+# Operate:
+#   sudo systemctl status  zbase-decoy
+#   sudo systemctl stop    zbase-decoy
+#   sudo systemctl restart zbase-decoy
+#   sudo journalctl -u zbase-decoy -f          # live logs (if StandardOutput=journal)
+#   sudo tail -f /var/log/zbase-decoy.log      # live logs (if StandardOutput=append:…)
+#
+# macOS note: systemd is Linux-only. On Darwin, use scripts/decoy-scheduler-launcher.sh
+# (tmux) or wrap this script in launchd. See docs/operations/decoy-scheduler-runbook-*.md.
+################################################################################
+
+[Unit]
+Description=zBase decoy withdrawal scheduler (Shipment A.2)
+Documentation=https://github.com/goheesheng/zx402/blob/main/docs/gitbook/decoy-scheduler.md
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+
+# REPLACE_ME — the OS user that owns the working dir and the .env.local file.
+# Do NOT run as root. Create with: sudo useradd --system --shell /bin/bash zbase
+User=zbase
+Group=zbase
+
+# REPLACE_ME — absolute path to the repo checkout on this host.
+WorkingDirectory=/REPLACE_ME/zx402
+
+# REPLACE_ME — env file containing POSTMAN_PRIVATE_KEY, BASE_SEPOLIA_RPC,
+# HYPERSYNC_TOKEN, USDC_POOL_ADDRESS, ZBASE_API, MAX_DAILY_BUDGET_USD, etc.
+# Permissions on this file MUST be 0600 and owned by the User above.
+EnvironmentFile=/REPLACE_ME/zx402/.env.local
+
+# Belt-and-braces budget cap independent of whatever .env.local says.
+# If both are set, the env file wins; this is just a floor.
+Environment=MAX_DAILY_BUDGET_USD=5
+
+# Use `npx tsx` rather than a global tsx binary so we always pick up the
+# repo-local version. `--no-install` would be stricter but breaks first-boot.
+ExecStart=/usr/bin/env npx tsx scripts/decoy-scheduler.ts
+
+# Restart policy: crash → wait 30s → retry. Avoids hot-looping on bad RPC.
+Restart=on-failure
+RestartSec=30
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+# Logging: append to a rotating file. If you prefer the journal, replace both
+# lines with: StandardOutput=journal / StandardError=journal
+StandardOutput=append:/var/log/zbase-decoy.log
+StandardError=append:/var/log/zbase-decoy.log
+
+# Graceful shutdown — decoy-scheduler.ts handles SIGTERM and finishes its cycle.
+KillSignal=SIGTERM
+TimeoutStopSec=60
+
+# Hardening — minimal blast radius if the process is ever compromised.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/REPLACE_ME/zx402/.decoy-state /var/log/zbase-decoy.log
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
