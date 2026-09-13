@@ -30,8 +30,9 @@ Base mainnet: Entrypoint `0x275faa86e2e316abe46807453c1d95f101d36431`, USDC pool
 (full list, including verifiers: `docs/gitbook/contract-addresses.md`). Live app:
 https://zbase.app (docs: https://docs.zbase.app).
 
-History before 2026-09-04 is pre-existing work: `main` @ `<<FILL: baseline commit>>`. Branch
-`ethonline-2026` adds the numbered changes below, committed 2026-09-13.
+Everything in the first commit of this repository, `97a4d00` ("pre-existing work snapshot"), is
+pre-existing work; every commit after it was made on 2026-09-13 during the event. Verify with
+`git log --oneline --reverse`.
 
 ## New work during ETHOnline (2026-09-13, branch `ethonline-2026`)
 
@@ -64,7 +65,9 @@ network, Ethereum Sepolia, and replaces the ternary pattern with explicit, fail-
    (`sepolia.etherscan.io`), a wagmi transport (`src/lib/chain-context.tsx`, `src/lib/wagmi.ts`).
 7. These docs (`HACKATHON.md`, video script, submission form, `docs/integrate/ethereum-sepolia.md`).
 
-Commits: `<<FILL: commit list>>`.
+Commits: `d5fe4ea` (chain config + `ETH_SEPOLIA_STACK`), `fc8c5e4` (facilitator network registry),
+`55f3fbd` (HyperSync helper, RPC fallback, USDC domain, `externalAsp` guards), `4cbbe59` (docs),
+plus the commit that fills these references.
 
 ## What works now on Ethereum Sepolia
 
