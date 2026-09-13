@@ -2,6 +2,13 @@
 
 Private x402 payments for AI agents. Apache 2.0.
 
+> **ETHOnline 2026 (Continuity submission).** This branch (`ethonline-2026`) builds on the
+> pre-existing zBase product described below — 0xbow Privacy Pools + an x402 facilitator, proven
+> end-to-end on Base mainnet 2026-07-19. New this event: a chain-generic network core that adds
+> **Ethereum Sepolia**, wired to 0xbow's own canonical Ethereum Sepolia Privacy Pool deployment.
+> See [`HACKATHON.md`](HACKATHON.md) for what's pre-existing vs. new, and
+> [`docs/integrate/ethereum-sepolia.md`](docs/integrate/ethereum-sepolia.md) to run it.
+
 ```ts
 import { createFacilitatorClient } from '@zbase-protocol/core';
 
