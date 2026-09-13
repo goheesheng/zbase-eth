@@ -33,6 +33,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { activeNetwork, getActiveStack } from "@/lib/contracts";
 import { confirmDepositForAsp } from "@/lib/asp-confirm-client";
+import { hypersyncUrlFor } from "@/lib/hypersync";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -502,7 +503,11 @@ async function runDemoFlow(deps: DemoFlowDeps) {
   const apiBase = getApiBase(req);
   const { createPublicClient: createPC, http: httpT } = await import("viem");
   const { baseSepolia: baseSep } = await import("viem/chains");
-  const HYPERSYNC_URL = "https://base-sepolia.rpc.hypersync.xyz";
+  // The demo is Base-Sepolia-only by design (baseSep below); chainId 84532 is
+  // always HyperSync-entitled today, so this is `hypersyncUrlFor(84532) ?? <today's
+  // literal>` — an explicit fallback so behaviour is unchanged if HYPERSYNC_CHAINS
+  // is ever narrowed.
+  const HYPERSYNC_URL = hypersyncUrlFor(84532) ?? "https://base-sepolia.rpc.hypersync.xyz";
   const hsClient = createPC({
     chain: baseSep,
     transport: httpT(HYPERSYNC_URL, {

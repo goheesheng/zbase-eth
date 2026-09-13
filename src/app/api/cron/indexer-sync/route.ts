@@ -8,6 +8,7 @@ import {
   type LogClient,
 } from "@/lib/indexer";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
+import { hypersyncUrlFor, hypersyncToken } from "@/lib/hypersync";
 
 /**
  * GET/POST /api/cron/indexer-sync — advance the Redis-backed state-tree cache.
@@ -20,10 +21,12 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
  * Read-only on-chain (getLogs + block number); writes only to Upstash. Safe to
  * call repeatedly — syncIndexer is idempotent/append-only. Secret-gated like
  * /api/asp-update (Vercel cron sends the CRON_SECRET as a Bearer token).
+ *
+ * Uses HyperSync for unbounded log queries on chains it's entitled to (Base +
+ * Base Sepolia today — see src/lib/hypersync.ts). On a chain without an
+ * entitlement (e.g. Ethereum), falls back to a CHUNKED scan on the plain RPC —
+ * syncIndexer does the chunking internally via IndexerConfig.logChunkBlocks.
  */
-
-// Uses HyperSync for unbounded log queries (same endpoint withdraw uses).
-const HYPERSYNC_TOKEN = process.env.HYPERSYNC_TOKEN;
 
 async function handle(request: Request) {
   try {
@@ -58,9 +61,6 @@ async function handle(request: Request) {
         { status: 503 },
       );
     }
-    if (!HYPERSYNC_TOKEN) {
-      return NextResponse.json({ error: "Missing HYPERSYNC_TOKEN" }, { status: 500 });
-    }
 
     const stack = getActiveStack();
     const ZERO = "0x0000000000000000000000000000000000000000";
@@ -73,18 +73,21 @@ async function handle(request: Request) {
 
     const activeChain = getActiveChain();
 
-    // HyperSync client for the log fetch (no block-range limits).
-    const hyperSyncUrl =
-      activeChain.network === "mainnet"
-        ? "https://base.rpc.hypersync.xyz"
-        : "https://base-sepolia.rpc.hypersync.xyz";
-    const hyperClient = createPublicClient({
-      chain: activeChain.chain,
-      transport: http(hyperSyncUrl, {
-        fetchOptions: { headers: { Authorization: `Bearer ${HYPERSYNC_TOKEN}` } },
-      }),
-    });
-    // Plain RPC for the latest block number (cheap, and HyperSync's tip may lag).
+    // HyperSync client for the log fetch (no block-range limits) — only when this
+    // chain is HyperSync-entitled. `hs` is null on a chain our token can't reach
+    // (e.g. Ethereum — see src/lib/hypersync.ts), in which case we scan the plain
+    // RPC instead, chunked via cfg.logChunkBlocks below (syncIndexer honors it).
+    const hs = hypersyncUrlFor(activeChain.chain.id);
+    const hyperClient = hs
+      ? createPublicClient({
+          chain: activeChain.chain,
+          transport: http(hs, {
+            fetchOptions: { headers: { Authorization: `Bearer ${hypersyncToken()}` } },
+          }),
+        })
+      : null;
+    // Plain RPC for the latest block number (cheap, and HyperSync's tip may lag),
+    // and — when hs is null — for the chunked log-scan fallback too.
     const rpcClient = createPublicClient({
       chain: activeChain.chain,
       transport: http(activeChain.readRpcUrl),
@@ -96,9 +99,17 @@ async function handle(request: Request) {
       network: stack.facilitatorNetwork,
       pool: stack.usdcPool,
       deployBlock: stack.poolDeployBlock,
+      // Only the RPC-fallback path needs chunking; HyperSync has no range cap.
+      logChunkBlocks: hs
+        ? undefined
+        : Number(process.env.LOG_CHUNK_BLOCKS ?? stack.logChunkBlocks ?? 10_000),
     };
 
-    const result = await syncIndexer(hyperClient as unknown as LogClient, cfg, latestBlock);
+    const result = await syncIndexer(
+      (hyperClient ?? rpcClient) as unknown as LogClient,
+      cfg,
+      latestBlock,
+    );
 
     return NextResponse.json({
       ok: true,

@@ -51,6 +51,7 @@ import { getActiveStack, getActiveChain } from "./contracts";
 import { getPostmanAddress, type PostmanCall } from "./postman-signer";
 import { splitSignature } from "./x402-facilitator";
 import type { SweepAuthority } from "./forwarding-authority";
+import { usdcDomainFor } from "./usdc-domain";
 
 /**
  * USDC EIP-3009 `receiveWithAuthorization(...)`. Same 9 args as
@@ -125,8 +126,7 @@ export function sweepDomain() {
   const stack = getActiveStack();
   const chain = getActiveChain();
   return {
-    name: "USD Coin",
-    version: "2",
+    ...usdcDomainFor(chain.chain.id),
     chainId: chain.chain.id,
     verifyingContract: stack.usdc as `0x${string}`,
   } as const;

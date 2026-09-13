@@ -33,6 +33,22 @@ export async function POST(request: Request) {
     if (!limited.success) return rateLimitResponse(limited);
 
     const stack = getActiveStack();
+
+    // External-ASP guard (fail loud, never touch the chain): on stacks where
+    // zBase is not the ASP_POSTMAN (e.g. Ethereum Sepolia, where 0xbow's own
+    // postman posts the ASP root), updateRoot would revert — refuse before
+    // acquiring the lock or scanning chain history.
+    if (stack.externalAsp) {
+      return NextResponse.json(
+        {
+          error: "withdraw_unsupported_on_stack",
+          message:
+            "This stack's ASP root is posted by a third-party postman (0xbow); zBase is not the ASP_POSTMAN on this pool, so it cannot submit updateRoot here. Deposit, indexing and anonymity-set reads are supported.",
+        },
+        { status: 501 },
+      );
+    }
+
     if (getActiveChain().network === "mainnet" && !aspUpdateSharedStateAvailable()) {
       return NextResponse.json(
         { error: "asp-update is locked: mainnet requires Upstash Redis." },

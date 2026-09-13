@@ -106,6 +106,16 @@ export interface IndexerConfig {
   network: string; // facilitatorNetwork, e.g. "eip155:84532"
   pool: `0x${string}`; // usdcPool address
   deployBlock: bigint; // POOL_DEPLOY_BLOCK
+  /**
+   * Chunk size (blocks) for the log fetch below. Omit (or 0) for the default
+   * single unbounded call — correct for a HyperSync client, which every
+   * existing Base caller passes. Callers on a chain without a HyperSync
+   * entitlement (e.g. Ethereum — see src/lib/hypersync.ts) pass a plain
+   * eth_getLogs RPC client here instead, which caps its block range per call;
+   * setting this splits the [fromBlock, latestBlock] window into chunks so
+   * that cap is respected.
+   */
+  logChunkBlocks?: number;
 }
 
 export interface IndexerState {
@@ -143,9 +153,34 @@ export async function syncIndexer(
   // Fetch the incremental window only. Blocks pre-hexed for HyperSync (hexBlock).
   const fromHex = hexBlock(fromBlock);
   const toHex = hexBlock(latestBlock);
+
+  // Chunked fetch for RPC-fallback callers (cfg.logChunkBlocks set — no HyperSync
+  // entitlement on this chain); a single unbounded call otherwise, unchanged from
+  // before this option existed.
+  const fetchAll = async (
+    event: typeof LEAF_INSERTED_EVENT | typeof DEPOSITED_EVENT,
+  ): Promise<Array<{ args: Record<string, unknown>; blockNumber: bigint | null }>> => {
+    if (!cfg.logChunkBlocks) {
+      return client.getLogs({ address: pool, event, fromBlock: fromHex, toBlock: toHex });
+    }
+    const step = BigInt(cfg.logChunkBlocks);
+    const all: Array<{ args: Record<string, unknown>; blockNumber: bigint | null }> = [];
+    for (let from = fromBlock; from <= latestBlock; from += step) {
+      const to = from + step - 1n > latestBlock ? latestBlock : from + step - 1n;
+      const chunkLogs = await client.getLogs({
+        address: pool,
+        event,
+        fromBlock: hexBlock(from),
+        toBlock: hexBlock(to),
+      });
+      all.push(...chunkLogs);
+    }
+    return all;
+  };
+
   const [leafLogs, depositLogs] = await Promise.all([
-    client.getLogs({ address: pool, event: LEAF_INSERTED_EVENT, fromBlock: fromHex, toBlock: toHex }),
-    client.getLogs({ address: pool, event: DEPOSITED_EVENT, fromBlock: fromHex, toBlock: toHex }),
+    fetchAll(LEAF_INSERTED_EVENT),
+    fetchAll(DEPOSITED_EVENT),
   ]);
 
   // Order leaves by their on-chain _index (LeanIMT is order-dependent). Within a

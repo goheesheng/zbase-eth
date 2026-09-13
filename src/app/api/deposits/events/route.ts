@@ -3,6 +3,7 @@ import { createPublicClient, http, parseAbiItem } from "viem";
 import { getActiveStack, getActiveChain } from "@/lib/contracts";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { hexBlock } from "@/lib/indexer";
+import { hypersyncUrlFor, hypersyncToken } from "@/lib/hypersync";
 
 /**
  * The pool's Deposited event. Decoded here rather than via asp-screening's
@@ -79,25 +80,59 @@ export async function GET(request: Request) {
     // Prefer HyperSync (unbounded range, no per-range/rate caps) over the public RPC
     // (Infura), whose eth_getLogs 429s under load — the documented starvation that made
     // this balance-load path fail intermittently. Blocks are pre-hexed (hexBlock):
-    // HyperSync rejects decimal block numbers. Falls back to the public RPC only when
-    // no HYPERSYNC_TOKEN is set (local dev); hex is accepted there too.
-    const hyperToken = process.env.HYPERSYNC_TOKEN;
-    const hyperUrl =
-      chain.network === "mainnet"
-        ? "https://base.rpc.hypersync.xyz"
-        : "https://base-sepolia.rpc.hypersync.xyz";
+    // HyperSync rejects decimal block numbers. Falls back to a CHUNKED public-RPC scan
+    // when this chain has no HyperSync entitlement (e.g. Ethereum Sepolia — our
+    // HyperSync token is Base-only, see @/lib/hypersync) or no HYPERSYNC_TOKEN is set
+    // (local dev); hex block numbers are accepted on the public RPC too.
+    const hs = hypersyncUrlFor(chain.chain.id);
     const publicClient = createPublicClient({
       chain: chain.chain,
-      transport: hyperToken
-        ? http(hyperUrl, { fetchOptions: { headers: { Authorization: `Bearer ${hyperToken}` } } })
+      transport: hs
+        ? http(hs, { fetchOptions: { headers: { Authorization: `Bearer ${hypersyncToken()}` } } })
         : http(chain.readRpcUrl),
     });
 
-    const fromBlock = hexBlock(BigInt(stack.poolDeployBlock)) as unknown as bigint;
+    const deployBlock = BigInt(stack.poolDeployBlock);
+    const fromBlock = hexBlock(deployBlock) as unknown as bigint;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    async function fetchLogs(event: any) {
+      if (hs) {
+        return publicClient.getLogs({
+          address: stack.usdcPool as `0x${string}`,
+          event,
+          fromBlock,
+          toBlock: "latest",
+        });
+      }
+      // RPC-fallback chunk size: LOG_CHUNK_BLOCKS env override, else the active
+      // stack's per-chain cap (agent S1: 10_000 Base / 50_000 eth-sepolia —
+      // measured eth_getLogs range caps), else 10_000. Public RPCs cap
+      // eth_getLogs block ranges, so an unbounded single call (the HyperSync
+      // path above) is not safe here.
+      const chunkBlocks = BigInt(
+        Number(process.env.LOG_CHUNK_BLOCKS ?? getActiveStack().logChunkBlocks ?? 10_000),
+      );
+      const currentBlock = await publicClient.getBlockNumber();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const all: any[] = [];
+      for (let from = deployBlock; from <= currentBlock; from += chunkBlocks) {
+        const to = from + chunkBlocks - 1n > currentBlock ? currentBlock : from + chunkBlocks - 1n;
+        const chunkLogs = await publicClient.getLogs({
+          address: stack.usdcPool as `0x${string}`,
+          event,
+          fromBlock: from,
+          toBlock: to,
+        });
+        all.push(...chunkLogs);
+      }
+      return all;
+    }
+
     const [depositLogs, leafLogs, withdrawLogs] = await Promise.all([
-      publicClient.getLogs({ address: stack.usdcPool as `0x${string}`, event: DEPOSITED_EVENT, fromBlock, toBlock: "latest" }),
-      publicClient.getLogs({ address: stack.usdcPool as `0x${string}`, event: LEAF_INSERTED_EVENT, fromBlock, toBlock: "latest" }),
-      publicClient.getLogs({ address: stack.usdcPool as `0x${string}`, event: WITHDRAWN_EVENT, fromBlock, toBlock: "latest" }),
+      fetchLogs(DEPOSITED_EVENT),
+      fetchLogs(LEAF_INSERTED_EVENT),
+      fetchLogs(WITHDRAWN_EVENT),
     ]);
 
     // Exactly the three fields recoverForwardingNotes matches on. NOT the depositor,

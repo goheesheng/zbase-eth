@@ -45,6 +45,7 @@ import {
 import { randomBytes } from "@noble/hashes/utils";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import { executorGateForStack } from "@/lib/executor-gate";
+import { hypersyncUrlFor, hypersyncToken } from "@/lib/hypersync";
 // HyperRPC: standard JSON-RPC powered by HyperSync (no block range limits, no rate limits)
 
 const _stack = getActiveStack();
@@ -53,8 +54,6 @@ const USDC_POOL_ADDRESS = _stack.usdcPool;
 const POOL_DEPLOY_BLOCK = Number(_stack.poolDeployBlock);
 const SNARK_FIELD = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
 
-// HyperSync: 2000x faster than RPC, no rate limits, gets ALL events instantly
-const HYPERSYNC_TOKEN = process.env.HYPERSYNC_TOKEN;
 const DEPOSITED_TOPIC = keccak256(toHex("Deposited(address,uint256,uint256,uint256,uint256)"));
 const LEAF_TOPIC = keccak256(toHex("LeafInserted(uint256,uint256,uint256)"));
 // Historical PrivacyPoolMorpho yield-distribution event. The active plain 0xbow
@@ -162,6 +161,21 @@ export async function POST(request: Request) {
       );
     }
     // ── End UTXO branch — single-value flow continues unchanged below ────────
+
+    // External-ASP guard (fail loud, never touch the chain): on stacks where
+    // zBase is not the ASP_POSTMAN (e.g. Ethereum Sepolia, where 0xbow's own
+    // postman posts the ASP root), a withdrawal proof would have to match a
+    // root we don't build and can't predict — refuse before any RPC/proof work.
+    if (_stack.externalAsp) {
+      return NextResponse.json(
+        {
+          error: "withdraw_unsupported_on_stack",
+          message:
+            "This stack's ASP root is posted by a third-party postman (0xbow); zBase is not the ASP_POSTMAN on this pool, so withdrawals cannot be proven/relayed here yet. Deposit, indexing and anonymity-set reads are supported.",
+        },
+        { status: 501 },
+      );
+    }
 
     const ZERO = "0x0000000000000000000000000000000000000000";
     if (
@@ -274,12 +288,19 @@ export async function POST(request: Request) {
     // scope) is already network-aware, so addresses + chain now agree.
     const activeChain = getActiveChain();
     const rpcUrl = activeChain.readRpcUrl;
+    // HyperSync endpoint for THIS chain, or null when our token isn't entitled
+    // here (Ethereum — see @/lib/hypersync). The externalAsp guard above already
+    // refuses Ethereum Sepolia before this point, so in the path that reaches
+    // here `hs` is Base/Base Sepolia and never null today — resolved per-chain
+    // anyway rather than hardcoded, for whenever that stops being true.
+    const hs = hypersyncUrlFor(activeChain.chain.id);
     // EOA postman needs POSTMAN_PRIVATE_KEY; CDP postman (POSTMAN_SIGNER=cdp) uses
-    // CDP-managed keys instead (validated inside sendPostmanTx). HYPERSYNC_TOKEN is
-    // required regardless (log scan).
+    // CDP-managed keys instead (validated inside sendPostmanTx). A HyperSync
+    // endpoint is required regardless (log scan; no chunked RPC fallback here yet
+    // — see the hackathon report for the known gap).
     const postmanIsEoa = postmanSignerKind() === "eoa";
-    if ((postmanIsEoa && !process.env.POSTMAN_PRIVATE_KEY) || !HYPERSYNC_TOKEN) {
-      return NextResponse.json({ error: "Missing server config (POSTMAN_PRIVATE_KEY or HYPERSYNC_TOKEN)" }, { status: 500 });
+    if ((postmanIsEoa && !process.env.POSTMAN_PRIVATE_KEY) || !hs) {
+      return NextResponse.json({ error: "Missing server config (POSTMAN_PRIVATE_KEY or HyperSync endpoint)" }, { status: 500 });
     }
 
     // Validate all BigInt inputs before conversion
@@ -328,20 +349,15 @@ export async function POST(request: Request) {
 
     // Two clients: HyperRPC for log queries (no limits), regular RPC for eth_call/writes.
     const writeRpcUrl = activeChain.writeRpcUrl;
-    // HyperSync endpoint is per-network (base-sepolia vs base mainnet).
-    const hyperSyncUrl =
-      activeChain.network === "mainnet"
-        ? "https://base.rpc.hypersync.xyz"
-        : "https://base-sepolia.rpc.hypersync.xyz";
     const publicClient = createPublicClient({
       chain: activeChain.chain,
       transport: http(rpcUrl), // Infura for eth_call, readContract
     });
     const hyperClient = createPublicClient({
       chain: activeChain.chain,
-      transport: http(hyperSyncUrl, {
+      transport: http(hs, {
         fetchOptions: {
-          headers: { "Authorization": `Bearer ${HYPERSYNC_TOKEN}` },
+          headers: { "Authorization": `Bearer ${hypersyncToken()}` },
         },
       }),
     });

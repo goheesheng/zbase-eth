@@ -17,6 +17,7 @@ import {
   type X402ReportAttributionSource,
 } from "@/lib/x402-attribution-sources";
 import { staticFallbackProvider, type ReasonCode, type SanctionsProvider } from "@/lib/ofac-screening";
+import { hypersyncUrlFor, hypersyncToken } from "@/lib/hypersync";
 
 export const BASE_USDC_ADDRESS = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913" as const;
 
@@ -24,7 +25,12 @@ const USDC_TRANSFER_EVENT = parseAbi([
   "event Transfer(address indexed from, address indexed to, uint256 value)",
 ]);
 
-const hasHyperSyncToken = Boolean(process.env.HYPERSYNC_TOKEN);
+// This module is Base-mainnet-only by design (chain: base below, BASE_USDC_ADDRESS
+// above). chainId 8453 is always HyperSync-entitled today, so this is
+// `hypersyncUrlFor(8453) ?? <today's literal>` — kept as an explicit fallback so
+// behaviour is unchanged even if HYPERSYNC_CHAINS were ever narrowed.
+const HYPERSYNC_URL = hypersyncUrlFor(8453) ?? "https://base.rpc.hypersync.xyz";
+const hasHyperSyncToken = Boolean(hypersyncUrlFor(8453));
 const DEFAULT_LOOKBACK_BLOCKS = BigInt(
   process.env.ZBASE_EXPOSURE_LOOKBACK_BLOCKS ?? (hasHyperSyncToken ? "25000000" : "50000"),
 );
@@ -38,8 +44,8 @@ const publicClient = createPublicClient({
 const hyperSyncLogClient = hasHyperSyncToken
   ? createPublicClient({
       chain: base,
-      transport: http("https://base.rpc.hypersync.xyz", {
-        fetchOptions: { headers: { Authorization: `Bearer ${process.env.HYPERSYNC_TOKEN}` } },
+      transport: http(HYPERSYNC_URL, {
+        fetchOptions: { headers: { Authorization: `Bearer ${hypersyncToken()}` } },
       }),
     })
   : null;

@@ -36,6 +36,19 @@ export async function refreshAspRoot(args: {
   const stack = getActiveStack();
   const activeChain = getActiveChain();
 
+  // External-ASP guard (fail loud, never touch the chain): on stacks where
+  // zBase is not the ASP_POSTMAN (e.g. Ethereum Sepolia, where 0xbow's own
+  // postman posts the ASP root), an updateRoot send would revert — refuse
+  // before scanning deposits or checking the postman key.
+  if (stack.externalAsp) {
+    return {
+      status: "rejected",
+      updated: false,
+      reason:
+        "withdraw_unsupported_on_stack: this stack's ASP root is posted by a third-party postman (0xbow); zBase is not the ASP_POSTMAN on this pool, so it cannot submit updateRoot here.",
+    };
+  }
+
   if (postmanSignerKind() === "eoa" && !process.env.POSTMAN_PRIVATE_KEY) {
     throw new Error("Missing POSTMAN_PRIVATE_KEY (POSTMAN_SIGNER=eoa)");
   }

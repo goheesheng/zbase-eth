@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getActiveChain, getActiveStack } from "@/lib/contracts";
 import { getPostmanAddress } from "@/lib/postman-signer";
+import { usdcDomainFor } from "@/lib/usdc-domain";
 
 /**
  * GET /api/forwarding/postman
@@ -42,7 +43,7 @@ export async function GET() {
         chainId: chain.chain.id,
         network: stack.facilitatorNetwork,
         // Everything the wallet needs to reconstruct the EIP-712 domain locally.
-        domain: { name: "USD Coin", version: "2", chainId: chain.chain.id, verifyingContract: stack.usdc },
+        domain: { ...usdcDomainFor(chain.chain.id), chainId: chain.chain.id, verifyingContract: stack.usdc },
         primaryType: "ReceiveWithAuthorization",
       },
       { headers: { "Cache-Control": "no-store" } },

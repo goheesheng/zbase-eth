@@ -8,14 +8,17 @@
  * tree, so it can never satisfy the withdrawal association proof (can't privately
  * withdraw). See src/lib/ofac-screening.ts for the L1+L2 provider.
  *
- * The event-fetch logic (HyperSync single-query, else chunked Infura/public RPC
- * with the 1999-block cap) is lifted verbatim from the original asp-update route
- * so behavior is unchanged — screening just filters the result.
+ * The event-fetch logic (HyperSync single-query, else chunked public-RPC scan)
+ * is lifted from the original asp-update route so behavior is unchanged on Base
+ * — screening just filters the result. The chunk size is dynamic (see
+ * fetchDepositedEvents below) so a chain without a HyperSync entitlement (e.g.
+ * Ethereum) can use its own measured eth_getLogs range cap.
  */
 
 import { createPublicClient, http } from "viem";
-import { getActiveChain, activeNetwork } from "./contracts";
+import { getActiveChain, getActiveStack } from "./contracts";
 import { hexBlock } from "./indexer";
+import { hypersyncUrlFor, hypersyncToken } from "./hypersync";
 
 /**
  * Structural subset of a viem public client — just the two reads we need. viem's
@@ -37,8 +40,6 @@ import {
   createConfiguredScreeningProvider,
   type ScreeningSource,
 } from "./ofac-screening";
-
-const MAX_BLOCK_RANGE = 1999n;
 
 export const DEPOSITED_EVENT = {
   type: "event" as const,
@@ -78,9 +79,9 @@ export interface ScreenResult {
 }
 
 /**
- * Fetch all `Deposited` events for a pool since deployment. HyperSync if
- * HYPERSYNC_TOKEN is set (no block-range limit), else chunked queries on the
- * given public client. Mirrors the original asp-update route exactly.
+ * Fetch all `Deposited` events for a pool since deployment. HyperSync when
+ * this chain is entitled (no block-range limit), else chunked queries on the
+ * given public client.
  */
 export async function fetchDepositedEvents(args: {
   publicClient: LogReader;
@@ -89,21 +90,21 @@ export async function fetchDepositedEvents(args: {
 }): Promise<DepositedLog[]> {
   const { publicClient, poolAddress, poolDeployBlock } = args;
 
-  const hypersyncToken = process.env.HYPERSYNC_TOKEN;
   // B6 residual fix (2026-07-04): derive the HyperSync chain + endpoint from the
   // ACTIVE network instead of hardcoding Base Sepolia. On a mainnet flip with
   // HYPERSYNC_TOKEN set, the old code queried the Sepolia HyperSync endpoint for
   // mainnet pool logs → empty/wrong ASP. Now network-correct on both chains.
+  //
+  // `hs` is null when this chain isn't HyperSync-entitled (our token is
+  // Base-only today — see src/lib/hypersync.ts), in which case we fall back to
+  // a chunked scan on the given public client instead of a single unbounded call.
   const activeChain = getActiveChain();
-  const hyperSyncUrl =
-    activeNetwork() === "mainnet"
-      ? "https://base.rpc.hypersync.xyz"
-      : "https://base-sepolia.rpc.hypersync.xyz";
-  const hyperClient: LogReader = hypersyncToken
+  const hs = hypersyncUrlFor(activeChain.chain.id);
+  const hyperClient: LogReader = hs
     ? createPublicClient({
         chain: activeChain.chain,
-        transport: http(hyperSyncUrl, {
-          fetchOptions: { headers: { Authorization: `Bearer ${hypersyncToken}` } },
+        transport: http(hs, {
+          fetchOptions: { headers: { Authorization: `Bearer ${hypersyncToken()}` } },
         }),
       })
     : publicClient;
@@ -115,7 +116,7 @@ export async function fetchDepositedEvents(args: {
   };
 
   let logs: RawLog[];
-  if (hypersyncToken) {
+  if (hs) {
     logs = (await hyperClient.getLogs({
       address: poolAddress,
       // Pre-hex for HyperSync (rejects decimal blocks; prod bundle emitted decimal).
@@ -124,18 +125,25 @@ export async function fetchDepositedEvents(args: {
       toBlock: "latest",
     })) as unknown as RawLog[];
   } else {
+    // RPC-fallback chunk size: LOG_CHUNK_BLOCKS env override, else the active
+    // stack's per-chain cap (agent S1: 10_000 for Base stacks, 50_000 for
+    // eth-sepolia — measured eth_getLogs range caps), else 10_000 as a safe
+    // default. Was a hardcoded 1999-block cap before this change.
+    const chunkBlocks = BigInt(
+      Number(process.env.LOG_CHUNK_BLOCKS ?? getActiveStack().logChunkBlocks ?? 10_000),
+    );
     const currentBlock = await publicClient.getBlockNumber();
     const all: RawLog[] = [];
-    for (let from = poolDeployBlock; from <= currentBlock; from += MAX_BLOCK_RANGE) {
+    for (let from = poolDeployBlock; from <= currentBlock; from += chunkBlocks) {
       const to =
-        from + MAX_BLOCK_RANGE - 1n > currentBlock ? currentBlock : from + MAX_BLOCK_RANGE - 1n;
-      const chunk = (await publicClient.getLogs({
+        from + chunkBlocks - 1n > currentBlock ? currentBlock : from + chunkBlocks - 1n;
+      const chunkLogs = (await publicClient.getLogs({
         address: poolAddress,
         event: DEPOSITED_EVENT,
         fromBlock: from,
         toBlock: to,
       })) as unknown as RawLog[];
-      all.push(...chunk);
+      all.push(...chunkLogs);
     }
     logs = all;
   }
