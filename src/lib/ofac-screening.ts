@@ -410,8 +410,10 @@ function withChainalysisProvider(baseProvider: SanctionsProvider): SanctionsProv
   };
 }
 
-function activeScreeningNetwork(): "base" | "base-sepolia" {
-  return process.env.NEXT_PUBLIC_NETWORK === "mainnet" ? "base" : "base-sepolia";
+function activeScreeningNetwork(): "base" | "base-sepolia" | "ethereum-sepolia" {
+  if (process.env.NEXT_PUBLIC_NETWORK === "mainnet") return "base";
+  if (process.env.NEXT_PUBLIC_NETWORK === "eth-sepolia") return "ethereum-sepolia";
+  return "base-sepolia";
 }
 
 export async function createConfiguredScreeningProvider(): Promise<ConfiguredScreeningProvider> {

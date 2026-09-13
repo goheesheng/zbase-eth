@@ -904,7 +904,7 @@ export default function Home() {
                       </p>
                       {depositTxHash && (
                         <a
-                          href={`https://sepolia.basescan.org/tx/${depositTxHash}`}
+                          href={`${chain.explorerUrl}/tx/${depositTxHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-indigo-500 hover:underline block"
@@ -1021,7 +1021,7 @@ export default function Home() {
                                 {!d.zkReady && !d.withdrawn && <span className="text-gray-300 ml-2">(legacy)</span>}
                               </div>
                               <a
-                                href={`https://sepolia.basescan.org/tx/${d.txHash}`}
+                                href={`${chain.explorerUrl}/tx/${d.txHash}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-indigo-400 hover:text-indigo-600"
@@ -1145,7 +1145,7 @@ export default function Home() {
                             </p>
                             {withdrawTxHash && (
                               <a
-                                href={`https://sepolia.basescan.org/tx/${withdrawTxHash}`}
+                                href={`${chain.explorerUrl}/tx/${withdrawTxHash}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-indigo-500 hover:underline block"
@@ -1331,7 +1331,7 @@ export default function Home() {
                       </p>
                       {withdrawTxHash && (
                         <a
-                          href={`https://sepolia.basescan.org/tx/${withdrawTxHash}`}
+                          href={`${chain.explorerUrl}/tx/${withdrawTxHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-indigo-500 hover:underline block"

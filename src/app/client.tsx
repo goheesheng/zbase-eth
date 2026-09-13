@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Logo } from "./_components/Logo";
+import { getActiveChain } from "@/lib/contracts";
 
 type Status = "idle" | "submitting" | "done" | "error";
 
@@ -66,7 +67,12 @@ function LiveStatus() {
     const TREASURY = "0xDbAA23601A95a01ee9B90160F6aA784CBE4E0f21";
     const USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
     const callData = "0x70a08231" + "000000000000000000000000" + TREASURY.slice(2).toLowerCase();
-    fetch("https://sepolia.base.org", {
+    // This hero widget is always Base-Sepolia-framed copy ("Live on Base
+    // Sepolia" below) regardless of NEXT_PUBLIC_NETWORK, so the RPC target
+    // is pinned to "sepolia" rather than following the active network —
+    // routes through the shared RPC-override helper without changing which
+    // chain this probe reads from.
+    fetch(getActiveChain("sepolia").readRpcUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

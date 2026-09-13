@@ -262,11 +262,17 @@ export async function GET() {
   const rpcConfigured =
     activeChain.network === "mainnet"
       ? Boolean(process.env.BASE_MAINNET_RPC || process.env.NEXT_PUBLIC_BASE_MAINNET_RPC)
-      : Boolean(process.env.BASE_SEPOLIA_RPC || process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC);
+      : activeChain.network === "eth-sepolia"
+        ? Boolean(process.env.ETH_SEPOLIA_RPC || process.env.NEXT_PUBLIC_ETH_SEPOLIA_RPC)
+        : Boolean(process.env.BASE_SEPOLIA_RPC || process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC);
   if (!rpcConfigured) {
-    const body: AnonymitySetResponse = emptyResponse(
-      `${activeChain.network === "mainnet" ? "BASE_MAINNET_RPC" : "BASE_SEPOLIA_RPC"} not configured`,
-    );
+    const missing =
+      activeChain.network === "mainnet"
+        ? "BASE_MAINNET_RPC"
+        : activeChain.network === "eth-sepolia"
+          ? "ETH_SEPOLIA_RPC"
+          : "BASE_SEPOLIA_RPC";
+    const body: AnonymitySetResponse = emptyResponse(`${missing} not configured`);
     return NextResponse.json(body, { status: 200 });
   }
 

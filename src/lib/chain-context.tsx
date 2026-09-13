@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, type ReactNode } from "react";
 
-export type ChainId = "base-sepolia" | "base-mainnet" | "solana-devnet";
+export type ChainId = "base-sepolia" | "base-mainnet" | "eth-sepolia" | "solana-devnet";
 
 interface ChainConfig {
   id: ChainId;
@@ -45,6 +45,20 @@ export const CHAINS: Record<ChainId, ChainConfig> = {
     explorerUrl: "https://basescan.org",
     rpcUrl: process.env.NEXT_PUBLIC_BASE_MAINNET_RPC || "https://mainnet.base.org",
   },
+  "eth-sepolia": {
+    id: "eth-sepolia",
+    name: "Ethereum Sepolia",
+    type: "evm",
+    network: "eip155:11155111",
+    // 0xbow's own canonical Ethereum Sepolia Privacy Pool deployment — zBase
+    // rents this pool (read/deposit only, external ASP — see contracts.ts
+    // ETH_SEPOLIA_STACK). Verified on-chain 2026-09-13.
+    usdcAddress: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+    poolAddress: "0x0b062Fe33c4f1592D8EA63f9a0177FcA44374C0f",
+    entrypointAddress: "0x34A2068192b1297f2a7f85D7D8CdE66F8F0921cB",
+    explorerUrl: "https://sepolia.etherscan.io",
+    rpcUrl: process.env.NEXT_PUBLIC_ETH_SEPOLIA_RPC || "https://ethereum-sepolia-rpc.publicnode.com",
+  },
   "solana-devnet": {
     id: "solana-devnet",
     name: "Solana Devnet",
@@ -77,7 +91,11 @@ interface ChainContextType {
 const SVM_READY =
   String(process.env.NEXT_PUBLIC_ZX402_SVM_READY ?? "false").toLowerCase() === "true";
 const DEFAULT_CHAIN_ID: ChainId =
-  process.env.NEXT_PUBLIC_NETWORK === "mainnet" ? "base-mainnet" : "base-sepolia";
+  process.env.NEXT_PUBLIC_NETWORK === "mainnet"
+    ? "base-mainnet"
+    : process.env.NEXT_PUBLIC_NETWORK === "eth-sepolia"
+      ? "eth-sepolia"
+      : "base-sepolia";
 
 const ChainContext = createContext<ChainContextType>({
   chain: CHAINS[DEFAULT_CHAIN_ID],

@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import Link from "next/link";
+import { explorerAddressUrl } from "@/lib/contracts";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -136,11 +137,11 @@ export default async function AnonymitySetPage() {
                   <span className="font-medium">{p.label}</span>
                   <br />
                   <a
-                    href={`https://sepolia.basescan.org/address/${p.address}`}
+                    href={explorerAddressUrl(p.address)}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="font-mono text-xs text-zinc-600 underline underline-offset-2 hover:text-zinc-900 break-all"
-                    title="Open on BaseScan"
+                    title="Open on block explorer"
                   >
                     {p.address}
                   </a>

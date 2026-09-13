@@ -42,7 +42,7 @@ export interface FacilitatorReadinessIssue {
 }
 
 export interface FacilitatorReadinessInput {
-  network: "sepolia" | "mainnet";
+  network: "sepolia" | "mainnet" | "eth-sepolia";
   stackIssues: string[];
   postmanIssues: string[];
   rpcConfigured: boolean;
@@ -79,7 +79,7 @@ export interface FacilitatorReadinessInput {
 }
 
 export interface FacilitatorReadiness {
-  network: "sepolia" | "mainnet";
+  network: "sepolia" | "mainnet" | "eth-sepolia";
   verificationReady: boolean;
   /**
    * The stack is sound enough to move real money, PROVIDED every response discloses that
@@ -173,10 +173,14 @@ function enabled(name: string): boolean {
   return String(process.env[name] ?? "false").toLowerCase() === "true";
 }
 
-function configuredRpc(network: "sepolia" | "mainnet"): boolean {
-  return network === "mainnet"
-    ? Boolean(process.env.BASE_MAINNET_RPC || process.env.NEXT_PUBLIC_BASE_MAINNET_RPC)
-    : Boolean(process.env.BASE_SEPOLIA_RPC || process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC);
+function configuredRpc(network: "sepolia" | "mainnet" | "eth-sepolia"): boolean {
+  if (network === "mainnet") {
+    return Boolean(process.env.BASE_MAINNET_RPC || process.env.NEXT_PUBLIC_BASE_MAINNET_RPC);
+  }
+  if (network === "eth-sepolia") {
+    return Boolean(process.env.ETH_SEPOLIA_RPC || process.env.NEXT_PUBLIC_ETH_SEPOLIA_RPC);
+  }
+  return Boolean(process.env.BASE_SEPOLIA_RPC || process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC);
 }
 
 /**
@@ -201,7 +205,7 @@ export const MAINNET_ANONYMITY_FLOOR = 30;
  *
  * Sepolia is unclamped — it is a testnet and privacy claims there are not sold.
  */
-function minimumAnonymitySet(network: "sepolia" | "mainnet"): number {
+function minimumAnonymitySet(network: "sepolia" | "mainnet" | "eth-sepolia"): number {
   const configured = Number(process.env.ZBASE_MIN_CUSTOMER_ANONYMITY_SET);
   const hasConfigured = Number.isSafeInteger(configured) && configured > 0;
 

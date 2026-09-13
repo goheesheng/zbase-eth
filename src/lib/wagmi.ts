@@ -5,7 +5,7 @@ import {
   coinbaseWallet,
   rainbowWallet,
 } from "@rainbow-me/rainbowkit/wallets";
-import { base, baseSepolia } from "wagmi/chains";
+import { base, baseSepolia, sepolia } from "wagmi/chains";
 import { http, createConfig } from "wagmi";
 import { getActiveStack } from "./contracts";
 
@@ -43,7 +43,12 @@ const connectors = connectorsForWallets(
   },
 );
 
-const activeWagmiChain = process.env.NEXT_PUBLIC_NETWORK === "mainnet" ? base : baseSepolia;
+const activeWagmiChain =
+  process.env.NEXT_PUBLIC_NETWORK === "mainnet"
+    ? base
+    : process.env.NEXT_PUBLIC_NETWORK === "eth-sepolia"
+      ? sepolia
+      : baseSepolia;
 
 export const config = createConfig({
   connectors,
@@ -51,6 +56,9 @@ export const config = createConfig({
   transports: {
     [base.id]: http(process.env.NEXT_PUBLIC_BASE_MAINNET_RPC || "https://mainnet.base.org"),
     [baseSepolia.id]: http(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC || "https://sepolia.base.org"),
+    [sepolia.id]: http(
+      process.env.NEXT_PUBLIC_ETH_SEPOLIA_RPC || "https://ethereum-sepolia-rpc.publicnode.com",
+    ),
   },
   ssr: true,
 });

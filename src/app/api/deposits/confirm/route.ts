@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createPublicClient, http } from "viem";
-import { getActiveChain, getActiveStack, isZeroAddress } from "@/lib/contracts";
+import { getActiveChain, getActiveStack, isZeroAddress, type StackNetwork } from "@/lib/contracts";
 import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
 import {
   findPoolDeposits,
@@ -21,7 +21,7 @@ import { refreshAspRoot } from "@/lib/asp-root-updater";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-function minimumConfirmations(network: "mainnet" | "sepolia"): bigint {
+function minimumConfirmations(network: StackNetwork): bigint {
   const configured = Number(process.env.ZBASE_ASP_CONFIRMATIONS);
   if (Number.isSafeInteger(configured) && configured > 0) return BigInt(configured);
   return network === "mainnet" ? 2n : 1n;

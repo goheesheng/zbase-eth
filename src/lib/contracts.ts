@@ -32,7 +32,7 @@
  */
 
 import type { Address, Chain } from "viem";
-import { base, baseSepolia } from "viem/chains";
+import { base, baseSepolia, sepolia } from "viem/chains";
 
 export type StackName = "single-value" | "utxo";
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as const;
@@ -40,15 +40,20 @@ export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000" as cons
 /**
  * Which chain the stack is deployed on. Selection is by the `NEXT_PUBLIC_NETWORK`
  * env var (server + client), defaulting to "sepolia" so existing behavior is
- * unchanged until mainnet is explicitly turned on. "mainnet" = Base mainnet
- * (eip155:8453); "sepolia" = Base Sepolia (eip155:84532).
+ * unchanged until mainnet (or eth-sepolia) is explicitly turned on. "mainnet" =
+ * Base mainnet (eip155:8453); "sepolia" = Base Sepolia (eip155:84532);
+ * "eth-sepolia" = Ethereum Sepolia L1 testnet (eip155:11155111), renting
+ * 0xbow's own canonical Ethereum Sepolia Privacy Pool deployment (see
+ * ETH_SEPOLIA_STACK below) rather than a zBase-operated pool.
  */
-export type StackNetwork = "sepolia" | "mainnet";
+export type StackNetwork = "sepolia" | "mainnet" | "eth-sepolia";
 
 /** Resolve the active network from env, defaulting to sepolia (back-compat). */
 export function activeNetwork(): StackNetwork {
   const n = (process.env.NEXT_PUBLIC_NETWORK ?? "").toLowerCase();
-  return n === "mainnet" ? "mainnet" : "sepolia";
+  if (n === "mainnet") return "mainnet";
+  if (n === "eth-sepolia") return "eth-sepolia";
+  return "sepolia";
 }
 
 /**
@@ -86,6 +91,14 @@ export function getActiveChain(network?: StackNetwork): ActiveChain {
     const write = process.env.BASE_MAINNET_WRITE_RPC ?? read;
     return { network: net, chain: base, readRpcUrl: read, writeRpcUrl: write };
   }
+  if (net === "eth-sepolia") {
+    const read =
+      process.env.ETH_SEPOLIA_RPC ??
+      process.env.NEXT_PUBLIC_ETH_SEPOLIA_RPC ??
+      "https://ethereum-sepolia-rpc.publicnode.com";
+    const write = process.env.ETH_SEPOLIA_WRITE_RPC ?? read;
+    return { network: net, chain: sepolia, readRpcUrl: read, writeRpcUrl: write };
+  }
   const read =
     process.env.BASE_SEPOLIA_RPC ??
     process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC ??
@@ -103,13 +116,13 @@ export interface ContractStack {
   stack: StackName;
   /**
    * CAIP-2 network identifier for the x402 facilitator (e.g. "eip155:84532"
-   * for Base Sepolia, "eip155:8453" for Base mainnet). Used as the network
-   * namespace for Upstash tier lookups in /api/withdraw. When mainnet is
-   * added, this field MUST be populated correctly on the mainnet stack —
-   * otherwise tier lookups will silently miss and per-settle fees default
-   * to 0 (FIND-301 reopens).
+   * for Base Sepolia, "eip155:8453" for Base mainnet, "eip155:11155111" for
+   * Ethereum Sepolia). Used as the network namespace for Upstash tier lookups
+   * in /api/withdraw. When a new network is added, this field MUST be
+   * populated correctly on its stack — otherwise tier lookups will silently
+   * miss and per-settle fees default to 0 (FIND-301 reopens).
    */
-  facilitatorNetwork: "eip155:84532" | "eip155:8453";
+  facilitatorNetwork: "eip155:84532" | "eip155:8453" | "eip155:11155111";
   entrypoint: `0x${string}`;
   usdcPool: `0x${string}`;
   usdc: `0x${string}`;
@@ -124,6 +137,35 @@ export interface ContractStack {
    * Testnet-only until externally audited (see plan §4b).
    */
   executorProcessooor?: `0x${string}`;
+  /**
+   * True when this pool's ASP root is posted by a THIRD PARTY postman (zBase
+   * is NOT the `ASP_POSTMAN` on that Entrypoint). zBase can still deposit,
+   * index, and read anonymity-set stats against an external-ASP stack, but
+   * must never call `updateRoot` (it has no authority to) and cannot serve
+   * withdrawals there — the clean-subset root it would need to prove against
+   * isn't ours to publish. False for every Base stack (zBase runs its own
+   * postman); true for eth-sepolia (0xbow runs theirs).
+   */
+  externalAsp: boolean;
+  /**
+   * Max block range per `eth_getLogs` call in the RPC-fallback log scanner,
+   * capped by the configured RPC provider. 10_000 matches today's hardcoded
+   * public-RPC ceiling for Base (see CLAUDE.md gotchas); publicnode's
+   * Ethereum Sepolia endpoint allows up to 50_000.
+   */
+  logChunkBlocks: number;
+  /** Block explorer origin for this stack, no trailing slash. */
+  explorerUrl: string;
+}
+
+/** `${explorerUrl}/tx/${hash}` for the given (or active) stack. */
+export function explorerTxUrl(hash: string, stack: ContractStack = getActiveStack()): string {
+  return `${stack.explorerUrl}/tx/${hash}`;
+}
+
+/** `${explorerUrl}/address/${addr}` for the given (or active) stack. */
+export function explorerAddressUrl(addr: string, stack: ContractStack = getActiveStack()): string {
+  return `${stack.explorerUrl}/address/${addr}`;
 }
 
 /** Reads EXECUTOR_PROCESSOOOR from env; zero-address (disabled) if unset/invalid. */
@@ -190,6 +232,9 @@ export const PRODUCTION_STACK: ContractStack = {
   commitmentVerifier: "0x293400accdeb0c1c2d419868303a8e96c09900ab",
   poolDeployBlock: 40668000n,
   executorProcessooor: envExecutor(),
+  externalAsp: false,
+  logChunkBlocks: 10_000,
+  explorerUrl: "https://sepolia.basescan.org",
 };
 
 /**
@@ -222,6 +267,9 @@ export const UTXO_STACK: ContractStack = {
   commitmentVerifier: "0x293400accdeb0c1c2d419868303a8e96c09900ab",
   // UTXO pool deploy block — populate alongside `usdcPool` after deploy.
   poolDeployBlock: 0n,
+  externalAsp: false,
+  logChunkBlocks: 10_000,
+  explorerUrl: "https://sepolia.basescan.org",
 };
 
 /**
@@ -282,6 +330,45 @@ export const MAINNET_STACK: ContractStack = {
     asNonNegativeBigInt(process.env.NEXT_PUBLIC_BASE_MAINNET_POOL_DEPLOY_BLOCK),
   ),
   executorProcessooor: envExecutor(),
+  externalAsp: false,
+  logChunkBlocks: 10_000,
+  explorerUrl: "https://basescan.org",
+};
+
+/**
+ * Ethereum Sepolia (L1 testnet, chainId 11155111) — 0xbow's OWN canonical
+ * Ethereum Sepolia Privacy Pool deployment (docs.privacypools.com/deployments),
+ * NOT a zBase-operated pool. zBase rents this pool for deposit / indexing /
+ * anonymity-set reads only. The ASP root on this Entrypoint is posted by
+ * 0xbow's own postman, not zBase's — so withdraw and /api/asp-update's
+ * `updateRoot` call are disabled on this stack (see `externalAsp` above;
+ * `getStackByName` still resolves it for the read paths that need it).
+ *
+ * All values below verified on-chain 2026-09-13 via `cast call` (SCOPE /
+ * ASSET / ENTRYPOINT / currentRoot all consistent). Do NOT change them.
+ * `poolDeployBlock` is the pool's contract-creation block (Etherscan
+ * getcontractcreation); the first `LeafInserted` event is at 8719776.
+ */
+export const ETH_SEPOLIA_STACK: ContractStack = {
+  label: "production",
+  stack: "single-value",
+  facilitatorNetwork: "eip155:11155111",
+  // 0xbow Entrypoint proxy (ERC1967), Ethereum Sepolia V1.
+  entrypoint: "0x34A2068192b1297f2a7f85D7D8CdE66F8F0921cB",
+  // 0xbow PrivacyPoolComplex, ASSET = Circle Sepolia USDC.
+  usdcPool: "0x0b062Fe33c4f1592D8EA63f9a0177FcA44374C0f",
+  // Circle USDC (Ethereum Sepolia), EIP-712 name "USDC" version "2".
+  usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  // pool.WITHDRAWAL_VERIFIER()
+  withdrawalVerifier: "0x822f33Ed5Ac1d33ceed4EEC60A99b06e5053A00a",
+  // pool.RAGEQUIT_VERIFIER()
+  commitmentVerifier: "0xb4b9cE9aEbD6A2C82A7ba5B64E33Cc7Fb6eC1b60",
+  poolDeployBlock: 8587064n,
+  // Call path (/api/facilitator/call) disabled on this stack — returns 501.
+  executorProcessooor: undefined,
+  externalAsp: true,
+  logChunkBlocks: 50_000,
+  explorerUrl: "https://sepolia.etherscan.io",
 };
 
 export function contractStackLaunchIssues(stack: ContractStack = getActiveStack()): string[] {
@@ -299,9 +386,10 @@ export function contractStackLaunchIssues(stack: ContractStack = getActiveStack(
  * The single source of truth for "which stack is this code talking to?".
  *
  * Selection is two-dimensional: (network, stack). Network defaults to the
- * `NEXT_PUBLIC_NETWORK` env var (sepolia unless explicitly "mainnet"); stack
- * defaults to "single-value". UTXO is opt-in via `{ stack: "utxo" }` and is
- * Sepolia-only for now (no mainnet UTXO until the ceremony + C4 fix — Road B).
+ * `NEXT_PUBLIC_NETWORK` env var (sepolia unless explicitly "mainnet" or
+ * "eth-sepolia"); stack defaults to "single-value". UTXO is opt-in via
+ * `{ stack: "utxo" }` and is Base-Sepolia-only for now (no mainnet UTXO until
+ * the ceremony + C4 fix — Road B; no Ethereum UTXO, ever — see getStackByName).
  *
  * Back-compat: callers that pass nothing get the Sepolia single-value stack,
  * exactly as before this change.
@@ -320,6 +408,8 @@ export function getActiveStack(opts?: {
  * doesn't silently fall through to single-value (which would route a UTXO spend
  * to the wrong pool address). Throws if mainnet UTXO is requested — that stack
  * does not exist yet (Road B: needs the trusted-setup ceremony + C4 fix first).
+ * Throws for UTXO on eth-sepolia too — there is no UTXO pool on Ethereum,
+ * only 0xbow's single-value deployment (ETH_SEPOLIA_STACK).
  */
 export function getStackByName(
   name: StackName,
@@ -332,6 +422,14 @@ export function getStackByName(
     // rather than silently route mainnet UTXO funds to a Sepolia/zero address.
     throw new Error(
       `No mainnet stack for "${name}" — UTXO mainnet is gated on the trusted-setup ceremony (Road B).`,
+    );
+  }
+  if (network === "eth-sepolia") {
+    if (name === "single-value") return ETH_SEPOLIA_STACK;
+    // No UTXO pool on Ethereum Sepolia — only 0xbow's single-value deployment
+    // is rented there. Fail loud rather than silently route to a Base pool.
+    throw new Error(
+      `No Ethereum Sepolia stack for "${name}" — there is no UTXO pool on Ethereum.`,
     );
   }
   switch (name) {

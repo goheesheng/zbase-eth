@@ -31,6 +31,10 @@ import { generateDepositSecrets } from "@/lib/privacy";
 import { useDepositVault, ensureNoteSeed, nextDepositIndex } from "@/lib/deposit-vault";
 import { deriveForwardingNote } from "@zbase-protocol/core/wallet";
 import { confirmDepositForAsp } from "@/lib/asp-confirm-client";
+// /test always runs against PRODUCTION_STACK (Base Sepolia) regardless of
+// NEXT_PUBLIC_NETWORK — see the file header. Explorer links therefore pin to
+// that stack rather than the env-selected active stack.
+import { explorerTxUrl, PRODUCTION_STACK } from "@/lib/contracts";
 import CodeSample from "./CodeSample";
 
 interface StoredDeposit {
@@ -524,7 +528,7 @@ export default function DepositWithdraw({ stack }: Props) {
               deposit tx
             </span>
             <a
-              href={`https://sepolia.basescan.org/tx/${depositTxHash}`}
+              href={explorerTxUrl(depositTxHash, PRODUCTION_STACK)}
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-black"
@@ -724,7 +728,7 @@ asp.raise_for_status()`,
                       </div>
                       <div className="mt-1 font-mono text-[11px] text-gray-500">
                         <a
-                          href={`https://sepolia.basescan.org/tx/${d.txHash}`}
+                          href={explorerTxUrl(d.txHash, PRODUCTION_STACK)}
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
@@ -874,7 +878,7 @@ asp.raise_for_status()`,
               settle tx
             </span>
             <a
-              href={`https://sepolia.basescan.org/tx/${withdrawTxHash}`}
+              href={explorerTxUrl(withdrawTxHash, PRODUCTION_STACK)}
               target="_blank"
               rel="noopener noreferrer"
               className="underline hover:text-black"
