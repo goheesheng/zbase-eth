@@ -7,6 +7,8 @@ import {
   tryConsumeTxHash,
   takeBpsFor,
   takePercentFor,
+  isFacilitatorNetwork,
+  viemChainForNetwork,
   type FacilitatorNetwork,
   type PricingTier,
 } from "@/lib/facilitator-authz";
@@ -22,7 +24,7 @@ import { checkRateLimit, rateLimitResponse } from "@/lib/rate-limit";
  *
  * Body:
  *   {
- *     network: "eip155:84532" | "eip155:8453",
+ *     network: "eip155:84532" | "eip155:8453" | "eip155:11155111",
  *     accessTokenTxHash: "0x...",
  *     nullifierHash: "0x..." | "<bigint as string>",
  *     tier?: "standard" | "compliance"  // default: "standard"
@@ -87,11 +89,12 @@ export async function POST(request: Request) {
       );
     }
 
-    if (network !== "eip155:84532" && network !== "eip155:8453") {
+    if (!isFacilitatorNetwork(network)) {
       return NextResponse.json(
         {
           authorized: false,
-          error: "network must be 'eip155:84532' or 'eip155:8453'",
+          error:
+            "network must be one of 'eip155:84532' (Base Sepolia), 'eip155:8453' (Base mainnet), or 'eip155:11155111' (Ethereum Sepolia)",
         },
         { status: 400 },
       );
@@ -143,22 +146,30 @@ export async function POST(request: Request) {
     // contract is: "you sent USDC to treasury → I record your nullifier
     // as paid." That's true regardless of whether settles are gated.
 
-    // Verify the on-chain access-token tx. Network-aware: Base Sepolia or mainnet.
+    // Verify the on-chain access-token tx. Network-aware: Base Sepolia, Base
+    // mainnet, or Ethereum Sepolia. ETHONLINE-2026: chain comes from the
+    // shared viemChainForNetwork helper (no more ad hoc base|baseSepolia
+    // branching); RPC + USDC are keyed lookups that fail closed via
+    // Record<FacilitatorNetwork, ...> exhaustiveness.
     const { createPublicClient, http, decodeEventLog, parseAbiItem, verifyMessage } =
       await import("viem");
-    const { baseSepolia, base } = await import("viem/chains");
 
     const isMainnet = network === "eip155:8453";
-    const chain = isMainnet ? base : baseSepolia;
-    const rpc = isMainnet
-      ? process.env.BASE_MAINNET_RPC || "https://mainnet.base.org"
-      : process.env.BASE_SEPOLIA_RPC || "https://sepolia.base.org";
-    // USDC token to match in the Transfer log, per network (Circle canonical).
-    const usdcAddress = (
-      isMainnet
-        ? "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913"
-        : "0x036CbD53842c5426634e7929541eC2318f3dCF7e"
-    ).toLowerCase();
+    const chain = viemChainForNetwork(network);
+    const RPC_BY_NETWORK: Record<FacilitatorNetwork, string> = {
+      "eip155:8453": process.env.BASE_MAINNET_RPC || "https://mainnet.base.org",
+      "eip155:84532": process.env.BASE_SEPOLIA_RPC || "https://sepolia.base.org",
+      "eip155:11155111": process.env.ETH_SEPOLIA_RPC || "https://ethereum-sepolia-rpc.publicnode.com",
+    };
+    // USDC token to match in the Transfer log, per network (Circle canonical
+    // for Base; verified-on-chain address for Ethereum Sepolia).
+    const USDC_BY_NETWORK: Record<FacilitatorNetwork, string> = {
+      "eip155:8453": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+      "eip155:84532": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+      "eip155:11155111": "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+    };
+    const rpc = RPC_BY_NETWORK[network];
+    const usdcAddress = USDC_BY_NETWORK[network].toLowerCase();
     const client = createPublicClient({ chain, transport: http(rpc) });
 
     let receipt;

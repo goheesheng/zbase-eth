@@ -16,7 +16,8 @@ export const ZBASE_FACILITATOR_URL =
   process.env.ZBASE_FACILITATOR_URL ?? "https://zbase.app";
 
 // Typed so it is passed straight to the SDK client (which selects the payment chain from it).
-// Base mainnet default; override for other chains (e.g. ZBASE_NETWORK=eip155:84532 for Base Sepolia).
+// Base mainnet default; override for other chains (e.g. ZBASE_NETWORK=eip155:84532 for Base
+// Sepolia, or ZBASE_NETWORK=eip155:11155111 for Ethereum Sepolia — ETHONLINE-2026).
 export const ZBASE_NETWORK = (process.env.ZBASE_NETWORK ?? "eip155:8453") as FacilitatorNetwork;
 
 export const FETCH_TIMEOUT_MS = Number(

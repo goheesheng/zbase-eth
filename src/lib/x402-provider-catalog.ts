@@ -1,6 +1,11 @@
 import { getAddress, isAddress } from "viem";
 
-export type X402ChainId = "eip155:8453" | "eip155:84532" | "solana:mainnet" | "solana:devnet";
+export type X402ChainId =
+  | "eip155:8453"
+  | "eip155:84532"
+  | "eip155:11155111"
+  | "solana:mainnet"
+  | "solana:devnet";
 
 export type X402ProviderCategory =
   | "ai-inference"

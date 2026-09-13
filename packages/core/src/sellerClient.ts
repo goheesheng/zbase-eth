@@ -51,6 +51,11 @@ const USDC_BY_NETWORK: Record<FacilitatorNetwork, UsdcInfo> = {
     name: "USDC",
     version: "2",
   },
+  "eip155:11155111": {
+    asset: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+    name: "USDC",
+    version: "2",
+  },
 };
 
 export interface SellerConfig {
@@ -99,7 +104,7 @@ export function createSeller(config: SellerConfig): Seller {
   const network = config.network ?? "eip155:8453";
   const usdc = USDC_BY_NETWORK[network];
   if (!usdc) {
-    throw new Error(`Unsupported network ${network} — use eip155:8453 or eip155:84532.`);
+    throw new Error(`Unsupported network ${network} — use eip155:8453, eip155:84532, or eip155:11155111.`);
   }
   if (!ADDRESS_RE.test(config.payTo)) {
     throw new Error(`payTo must be a 0x EVM address, got: ${config.payTo}`);

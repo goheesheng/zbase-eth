@@ -6,6 +6,7 @@ import {
   recordUserPremium,
   userIsPremium,
   tryConsumeTxHash,
+  isTestnetNetwork,
   type FacilitatorNetwork,
 } from "@/lib/facilitator-authz";
 import { getActiveStack, getActiveChain } from "@/lib/contracts";
@@ -34,7 +35,9 @@ const UPGRADE_FEE_SEPOLIA = BigInt(process.env.ZBASE_PREMIUM_FEE_SEPOLIA ?? "100
 const UPGRADE_FEE_MAINNET = BigInt(process.env.ZBASE_PREMIUM_FEE_MAINNET ?? "5000000"); // $5.00
 
 function upgradeFee(network: FacilitatorNetwork): bigint {
-  return network === "eip155:8453" ? UPGRADE_FEE_MAINNET : UPGRADE_FEE_SEPOLIA;
+  // Ethereum Sepolia is a testnet, so it shares the Sepolia fee (same rule as
+  // the rest of the facilitator's fee/floor tables — see isTestnetNetwork).
+  return isTestnetNetwork(network) ? UPGRADE_FEE_SEPOLIA : UPGRADE_FEE_MAINNET;
 }
 
 export async function GET(request: Request) {

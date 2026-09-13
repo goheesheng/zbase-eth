@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAgentRegistry } from "../../agent/register/route";
 import { activeNetwork, getActiveStack, getActiveChain } from "@/lib/contracts";
 import { getFacilitatorReadiness } from "@/lib/facilitator-readiness";
+import { isFacilitatorNetwork } from "@/lib/facilitator-authz";
 import {
   cacheLabelsMatch,
   cacheRootMatches,
@@ -81,15 +82,13 @@ export async function POST(request: Request) {
       });
     }
 
-    // zBase supports Base Sepolia (eip155:84532) + Base mainnet (eip155:8453).
-    if (
-      paymentDetails.networkId &&
-      paymentDetails.networkId !== "eip155:84532" &&
-      paymentDetails.networkId !== "eip155:8453"
-    ) {
+    // zBase supports Base Sepolia (eip155:84532), Base mainnet (eip155:8453),
+    // and Ethereum Sepolia (eip155:11155111). isFacilitatorNetwork fails
+    // closed on anything else instead of a two-way allowlist.
+    if (paymentDetails.networkId && !isFacilitatorNetwork(paymentDetails.networkId)) {
       return NextResponse.json({
         valid: false,
-        reason: `Unsupported network: ${paymentDetails.networkId}. zBase supports Base Sepolia (eip155:84532) and Base mainnet (eip155:8453).`,
+        reason: `Unsupported network: ${paymentDetails.networkId}. zBase supports Base Sepolia (eip155:84532), Base mainnet (eip155:8453), and Ethereum Sepolia (eip155:11155111).`,
       });
     }
 

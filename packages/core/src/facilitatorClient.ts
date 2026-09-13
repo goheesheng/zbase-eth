@@ -21,7 +21,7 @@
 import { generateDepositSecrets, computePrecommitment } from "./account.js";
 import { deriveChangeNote } from "./forwardingNotes.js";
 
-export type FacilitatorNetwork = "eip155:84532" | "eip155:8453";
+export type FacilitatorNetwork = "eip155:84532" | "eip155:8453" | "eip155:11155111";
 
 /** Default facilitator: the public zBase deployment. Used when no baseUrl is given. */
 export const DEFAULT_FACILITATOR_URL = "https://zbase.app";
@@ -66,9 +66,33 @@ export const BASE_SEPOLIA: DepositConfig = {
   deployBlock: 40668000,
 };
 
-/** Look up the static deposit config for a network. */
+/**
+ * Ethereum SEPOLIA (eip155:11155111) — testnet. ETHONLINE-2026: mirrors
+ * src/lib/contracts.ts ETH_SEPOLIA_STACK (0xbow Ethereum Sepolia V1 pool,
+ * verified on-chain 2026-09-13).
+ */
+export const ETH_SEPOLIA: DepositConfig = {
+  network: "eip155:11155111",
+  chainId: 11155111,
+  asset: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // USDC (name "USDC", version "2")
+  entrypoint: "0x34A2068192b1297f2a7f85D7D8CdE66F8F0921cB",
+  privacyPool: "0x0b062Fe33c4f1592D8EA63f9a0177FcA44374C0f",
+  deployBlock: 8587064,
+};
+
+/**
+ * Look up the static deposit config for a network. Keyed lookup — fails
+ * closed via Record<FacilitatorNetwork, ...> exhaustiveness (an unhandled
+ * network is a compile error, not a silent Base Sepolia fallback).
+ */
+const DEPOSIT_CONFIG_BY_NETWORK: Record<FacilitatorNetwork, DepositConfig> = {
+  "eip155:8453": BASE_MAINNET,
+  "eip155:84532": BASE_SEPOLIA,
+  "eip155:11155111": ETH_SEPOLIA,
+};
+
 export function depositConfigFor(network: FacilitatorNetwork): DepositConfig {
-  return network === "eip155:8453" ? BASE_MAINNET : BASE_SEPOLIA;
+  return DEPOSIT_CONFIG_BY_NETWORK[network];
 }
 
 export interface FacilitatorClientConfig {

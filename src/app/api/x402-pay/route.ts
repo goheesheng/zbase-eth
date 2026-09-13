@@ -1,6 +1,15 @@
 import { NextResponse } from "next/server";
 import { getActiveStack } from "@/lib/contracts";
 import { internalUrl } from "@/lib/internal-url";
+import type { FacilitatorNetwork } from "@/lib/facilitator-authz";
+
+// ETHONLINE-2026: keyed lookup (not a mainnet-vs-sepolia ternary) so an
+// unhandled network is a compile error, not a silent "Base Sepolia" label.
+const NETWORK_LABELS: Record<FacilitatorNetwork, string> = {
+  "eip155:8453": "Base mainnet (8453)",
+  "eip155:84532": "Base Sepolia (84532)",
+  "eip155:11155111": "Ethereum Sepolia (11155111)",
+};
 
 /**
  * POST /api/x402-pay
@@ -166,7 +175,7 @@ export async function GET() {
     contracts: {
       entrypoint: stack.entrypoint,
       usdcPool: stack.usdcPool,
-      network: stack.facilitatorNetwork === "eip155:8453" ? "Base mainnet (8453)" : "Base Sepolia (84532)",
+      network: NETWORK_LABELS[stack.facilitatorNetwork],
     },
     stack: stack.label,
   });

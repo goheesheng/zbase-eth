@@ -17,7 +17,7 @@
 import { z } from "zod";
 import { createPublicClient, http, parseUnits, formatUnits, type Hex } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { base, baseSepolia } from "viem/chains";
+import { base, baseSepolia, sepolia } from "viem/chains";
 import { deriveFundingAccount } from "../account.js";
 import { ZBASE_FACILITATOR_URL } from "../config.js";
 
@@ -66,6 +66,7 @@ async function fetchPostman(): Promise<PostmanInfo> {
 function chainFor(chainId: number) {
   if (chainId === 8453) return base;
   if (chainId === 84532) return baseSepolia;
+  if (chainId === 11155111) return sepolia; // Ethereum Sepolia (ETHONLINE-2026)
   throw new Error(`Unsupported chainId ${chainId}`);
 }
 

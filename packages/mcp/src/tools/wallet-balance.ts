@@ -13,8 +13,8 @@
  * long-term memory, no secrets in the transcript.
  */
 import { z } from "zod";
-import { createPublicClient, http, formatUnits } from "viem";
-import { base, baseSepolia } from "viem/chains";
+import { createPublicClient, http, formatUnits, type Chain } from "viem";
+import { base, baseSepolia, sepolia } from "viem/chains";
 import { getWalletBalance, type WalletBalance } from "@zbase-protocol/core";
 import { getOrCreateSeed } from "../wallet.js";
 import { ZBASE_FACILITATOR_URL } from "../config.js";
@@ -55,7 +55,18 @@ export async function loadWalletBalance(maxIndex = 50): Promise<WalletBalance & 
   }
   const data = (await res.json()) as PoolEvents;
 
-  const chain = data.network === "eip155:8453" ? base : baseSepolia;
+  // ETHONLINE-2026: keyed lookup (not a mainnet-vs-sepolia ternary) so an
+  // unrecognized network fails closed instead of silently being treated as
+  // Base Sepolia.
+  const CHAIN_BY_NETWORK: Record<string, Chain> = {
+    "eip155:8453": base,
+    "eip155:84532": baseSepolia,
+    "eip155:11155111": sepolia,
+  };
+  const chain = CHAIN_BY_NETWORK[data.network];
+  if (!chain) {
+    throw new Error(`Unsupported network ${data.network} reported by /api/deposits/events`);
+  }
   // isSpent reads nullifierHashes(h) per note. viem's default RPC (mainnet.base.org)
   // rate-limits ("over rate limit") under load — the public-RPC starvation. Use a
   // configurable, reliable endpoint (ZBASE_BASE_RPC), defaulting to a public node with

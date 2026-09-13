@@ -23,6 +23,10 @@ export function executorGateForStack(
   stack: ContractStack,
   mainnetApproved = process.env.ZBASE_ENABLE_MAINNET_EXECUTOR === "true",
 ): ExecutorGate {
+  // ETHONLINE-2026: this is a Base-mainnet-only gate (not a mainnet-vs-testnet
+  // ternary) — Ethereum Sepolia (eip155:11155111) is a testnet like Base
+  // Sepolia and correctly falls through to the executor-configured check below,
+  // no separate case needed.
   if (stack.facilitatorNetwork === "eip155:8453" && !mainnetApproved) {
     return {
       enabled: false,

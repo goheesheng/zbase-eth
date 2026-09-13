@@ -1,7 +1,15 @@
 import { NextResponse } from "next/server";
 import { getActiveStack } from "@/lib/contracts";
-import { pricingStructure } from "@/lib/facilitator-authz";
+import { pricingStructure, type FacilitatorNetwork } from "@/lib/facilitator-authz";
 import { getFacilitatorReadiness } from "@/lib/facilitator-readiness";
+
+// ETHONLINE-2026: keyed lookup (not a mainnet-vs-sepolia ternary) so an
+// unhandled network is a compile error, not a silent "Base Sepolia" label.
+const NETWORK_LABELS: Record<FacilitatorNetwork, string> = {
+  "eip155:8453": "Base Mainnet (8453)",
+  "eip155:84532": "Base Sepolia (84532)",
+  "eip155:11155111": "Ethereum Sepolia (11155111)",
+};
 
 /**
  * GET /api/facilitator/supported
@@ -17,8 +25,7 @@ export async function GET() {
   // not a hardcoded Sepolia value. Pre-fix this returned eip155:84532 even on a
   // mainnet flip, telling x402 clients the wrong network. Derive both the CAIP-2
   // id and the human label from the active stack.
-  const isMainnet = stack.facilitatorNetwork === "eip155:8453";
-  const networkLabel = isMainnet ? "Base Mainnet (8453)" : "Base Sepolia (84532)";
+  const networkLabel = NETWORK_LABELS[stack.facilitatorNetwork];
   // Early access is not a mode anyone turns on — if the stack is sound and the set is
   // thin, zBase settles and discloses. See src/lib/pilot.ts.
   const inPilot = !readiness.customerReady && readiness.pilotReady;

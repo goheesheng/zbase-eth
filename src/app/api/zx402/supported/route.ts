@@ -2,6 +2,15 @@ import { NextResponse } from "next/server";
 import { getThirdPartyEndpoints } from "@/lib/external-x402-catalog";
 import { getActiveStack } from "@/lib/contracts";
 import { exposurePaymentConfig } from "@/lib/exposure-payment";
+import type { FacilitatorNetwork } from "@/lib/facilitator-authz";
+
+// ETHONLINE-2026: keyed lookup (not a mainnet-vs-sepolia ternary) so an
+// unhandled network is a compile error, not a silent "base-sepolia" id.
+const CHAIN_SLUG_BY_NETWORK: Record<FacilitatorNetwork, string> = {
+  "eip155:8453": "base-mainnet",
+  "eip155:84532": "base-sepolia",
+  "eip155:11155111": "eth-sepolia",
+};
 
 // Solana is paused by default while the product focuses on Base mainnet launch.
 // Operators must explicitly opt in after the SVM audit fixes are deployed.
@@ -36,7 +45,7 @@ export async function GET() {
       status: SVM_READY ? "explicitly enabled devnet" : "paused — Base mainnet launch focus",
     },
     {
-      id: isMainnet ? "base-mainnet" : "base-sepolia",
+      id: CHAIN_SLUG_BY_NETWORK[stack.facilitatorNetwork],
       network: stack.facilitatorNetwork,
       privacy: "on-chain Groth16 + ASP enforced",
       yield: "n/a (plain USDC privacy pool)",

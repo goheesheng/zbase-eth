@@ -8,10 +8,27 @@ import {
 import type { PaymentPayload, PaymentRequired, PaymentRequirements, SettleResponse } from "@x402/core/types";
 import { NextResponse } from "next/server";
 import { getActiveStack } from "@/lib/contracts";
+import { isFacilitatorNetwork, type FacilitatorNetwork } from "@/lib/facilitator-authz";
 
 const BASE_MAINNET_USDC = "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913";
 const BASE_SEPOLIA_USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+// ETHONLINE-2026: Ethereum Sepolia USDC (verified on-chain), EIP-712 domain
+// name "USDC" / version "2".
+const ETH_SEPOLIA_USDC = "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238";
 const DEFAULT_TREASURY = "0xDbAA23601A95a01ee9B90160F6aA784CBE4E0f21";
+
+// Keyed lookup of the USDC env-var override + fallback per network. Fails
+// closed by construction: Record<FacilitatorNetwork, ...> requires every
+// network in the union to have an entry, so an unhandled network is a
+// compile error rather than a silent Sepolia fallback.
+const USDC_ENV_FALLBACK_BY_NETWORK: Record<
+  FacilitatorNetwork,
+  { envVar: string | undefined; fallback: string }
+> = {
+  "eip155:8453": { envVar: process.env.BASE_MAINNET_USDC, fallback: BASE_MAINNET_USDC },
+  "eip155:84532": { envVar: process.env.USDC_CONTRACT_ADDRESS, fallback: BASE_SEPOLIA_USDC },
+  "eip155:11155111": { envVar: process.env.ETH_SEPOLIA_USDC, fallback: ETH_SEPOLIA_USDC },
+};
 
 export interface VerifiedExposurePayment {
   mode: "x402" | "dev";
@@ -25,7 +42,7 @@ export interface VerifiedExposurePayment {
 export interface ExposurePaymentConfig {
   amountAtomic: string;
   displayPrice: string;
-  network: "eip155:8453" | "eip155:84532";
+  network: FacilitatorNetwork;
   asset: `0x${string}`;
   payTo: `0x${string}`;
   maxTimeoutSeconds: number;
@@ -59,22 +76,15 @@ function configuredTimeoutSeconds(value: string | undefined): number {
 export function exposurePaymentConfig(): ExposurePaymentConfig {
   const stack = getActiveStack();
   const configuredNetwork = process.env.ZBASE_EXPOSURE_NETWORK;
-  const network =
-    configuredNetwork === "eip155:8453" || configuredNetwork === "eip155:84532"
-      ? configuredNetwork
-      : stack.facilitatorNetwork;
-  const asset =
-    network === "eip155:8453"
-      ? configuredAddress(
-          process.env.ZBASE_EXPOSURE_USDC ?? process.env.BASE_MAINNET_USDC,
-          BASE_MAINNET_USDC,
-          "ZBASE_EXPOSURE_USDC",
-        )
-      : configuredAddress(
-          process.env.ZBASE_EXPOSURE_USDC ?? process.env.USDC_CONTRACT_ADDRESS,
-          BASE_SEPOLIA_USDC,
-          "ZBASE_EXPOSURE_USDC",
-        );
+  const network: FacilitatorNetwork = isFacilitatorNetwork(configuredNetwork)
+    ? configuredNetwork
+    : stack.facilitatorNetwork;
+  const { envVar, fallback } = USDC_ENV_FALLBACK_BY_NETWORK[network];
+  const asset = configuredAddress(
+    process.env.ZBASE_EXPOSURE_USDC ?? envVar,
+    fallback,
+    "ZBASE_EXPOSURE_USDC",
+  );
   return {
     amountAtomic: configuredPositiveInteger(
       process.env.ZBASE_EXPOSURE_PRICE_ATOMIC,

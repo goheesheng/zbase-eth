@@ -38,6 +38,8 @@
  */
 
 import { Redis } from "@upstash/redis";
+import type { Chain } from "viem";
+import { base, baseSepolia, sepolia } from "viem/chains";
 import { activeNetwork } from "@/lib/contracts";
 
 // ── Backend selection ──────────────────────────────────────────────
@@ -171,7 +173,56 @@ const ACCESS_FEE_MAINNET: Record<PricingTier, bigint> = {
 const FEE_REQUIRED =
   String(process.env.ZBASE_FEE_REQUIRED ?? "false").toLowerCase() === "true";
 
-export type FacilitatorNetwork = "eip155:84532" | "eip155:8453";
+// ETHONLINE-2026: Ethereum Sepolia added as a first-class facilitator network
+// alongside Base Sepolia + Base mainnet. It is a TESTNET, so it shares the
+// Sepolia fee/floor/access tables (via isTestnetNetwork) rather than getting
+// its own copy — only chain-specific values (chainId, viem Chain, USDC
+// address) get a dedicated entry.
+export const FACILITATOR_NETWORKS = [
+  "eip155:84532",
+  "eip155:8453",
+  "eip155:11155111",
+] as const;
+export type FacilitatorNetwork = (typeof FACILITATOR_NETWORKS)[number];
+
+export function isFacilitatorNetwork(x: unknown): x is FacilitatorNetwork {
+  return (
+    typeof x === "string" &&
+    (FACILITATOR_NETWORKS as readonly string[]).includes(x)
+  );
+}
+
+const CHAIN_ID_BY_NETWORK: Record<FacilitatorNetwork, 84532 | 8453 | 11155111> = {
+  "eip155:84532": 84532,
+  "eip155:8453": 8453,
+  "eip155:11155111": 11155111,
+};
+
+export function chainIdForNetwork(
+  network: FacilitatorNetwork,
+): 84532 | 8453 | 11155111 {
+  return CHAIN_ID_BY_NETWORK[network];
+}
+
+const VIEM_CHAIN_BY_NETWORK: Record<FacilitatorNetwork, Chain> = {
+  "eip155:84532": baseSepolia,
+  "eip155:8453": base,
+  "eip155:11155111": sepolia,
+};
+
+export function viemChainForNetwork(network: FacilitatorNetwork): Chain {
+  return VIEM_CHAIN_BY_NETWORK[network];
+}
+
+/**
+ * True for testnet networks (Base Sepolia + Ethereum Sepolia). Used to select
+ * the shared testnet fee/floor/access tables instead of maintaining a
+ * separate copy per testnet — only `eip155:8453` (Base mainnet) is "not
+ * testnet" here.
+ */
+export function isTestnetNetwork(network: FacilitatorNetwork): boolean {
+  return network === "eip155:84532" || network === "eip155:11155111";
+}
 
 // ── Public pricing API ─────────────────────────────────────────────
 
@@ -183,7 +234,7 @@ export function accessFeeAtomic(
   network: FacilitatorNetwork,
   tier: PricingTier,
 ): bigint {
-  const table = network === "eip155:8453" ? ACCESS_FEE_MAINNET : ACCESS_FEE_SEPOLIA;
+  const table = isTestnetNetwork(network) ? ACCESS_FEE_SEPOLIA : ACCESS_FEE_MAINNET;
   return table[tier];
 }
 
@@ -216,7 +267,7 @@ export function perSettleFeeAtomic(
 ): bigint {
   if (tier === "enterprise") return 0n;
   const bps = TAKE_BPS[tier];
-  const floors = network === "eip155:8453" ? FLOOR_MAINNET : FLOOR_SEPOLIA;
+  const floors = isTestnetNetwork(network) ? FLOOR_SEPOLIA : FLOOR_MAINNET;
   const percentageFee = (paymentAmount * bps) / 10000n;
   const floor = floors[tier];
   return percentageFee > floor ? percentageFee : floor;
@@ -278,7 +329,7 @@ export function minimumSettleAtomic(
 ): bigint {
   if (tier === "enterprise") return 0n;
   const bps = TAKE_BPS[tier];
-  const floors = network === "eip155:8453" ? FLOOR_MAINNET : FLOOR_SEPOLIA;
+  const floors = isTestnetNetwork(network) ? FLOOR_SEPOLIA : FLOOR_MAINNET;
   const floor = floors[tier];
   // Ceiling division: (a + b - 1) / b rounds a/b up when a, b are positive.
   const numerator = floor * 10000n;
@@ -329,6 +380,14 @@ export function pricingStructure() {
         note:
           "Production pricing. Access fee + per-settle take are real USDC " +
           "routed on-chain to the treasury wallet.",
+      },
+      "eip155:11155111": {
+        name: "Ethereum Sepolia (testnet)",
+        pricingMode: "free-for-testing",
+        note:
+          "Testnet is free for development. Shares the Base Sepolia fee/floor " +
+          "tables (both testnets use the same pricing) — access fee + per-settle " +
+          "take are paid in Ethereum Sepolia USDC (faucet-funded, no real value).",
       },
     },
     tiers: {
