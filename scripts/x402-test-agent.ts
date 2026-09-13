@@ -56,6 +56,39 @@ function log(emoji: string, msg: string) {
   console.log(`  ${emoji}  ${msg}`);
 }
 
+/**
+ * The facilitator verifies against its root-verified shared indexer, which a cron
+ * (/api/cron/indexer-sync) advances in production. Nothing runs that cron on a
+ * laptop, so this harness — which already holds operator env — triggers the same
+ * sync after every leaf insertion (deposit, and the change note a settle creates).
+ */
+async function syncIndexer(): Promise<void> {
+  const cronSecret = process.env.INDEXER_SYNC_SECRET ?? process.env.CRON_SECRET;
+  if (!cronSecret) {
+    log("⚠️", "CRON_SECRET not set — relying on an external indexer-sync cron");
+    return;
+  }
+  log("⏳", "Advancing the shared indexer (stands in for the indexer-sync cron)...");
+  const syncRes = await fetch(`${ZBASE_API}/api/cron/indexer-sync`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${cronSecret}` },
+  });
+  const syncData = await syncRes.json().catch(() => ({}));
+  log(syncRes.ok ? "✅" : "⚠️", `Indexer: ${syncRes.ok ? `${syncData.leafCount} leaves @ block ${syncData.cursor}` : JSON.stringify(syncData).slice(0, 160)}`);
+  // The facilitator caches its readiness verdict for ~10 s; wait until it has
+  // re-read the freshly synced cache (stateRootMatches) before verifying.
+  for (let i = 0; i < 8; i++) {
+    const r = await fetch(`${ZBASE_API}/api/facilitator/supported`).then((x) => x.json()).catch(() => null);
+    const idx = r?.privacy?.indexer;
+    if (idx?.stateRootMatches && idx?.aspRootMatches) {
+      log("✅", `Facilitator sees the synced tree (${idx.leafCount} leaves, roots match)`);
+      return;
+    }
+    await new Promise((res) => setTimeout(res, 3000));
+  }
+  log("⚠️", "Facilitator readiness did not refresh in time; continuing anyway");
+}
+
 async function main() {
   console.log(`
 ╔══════════════════════════════════════════════════════════╗
@@ -188,11 +221,36 @@ async function main() {
     commitment: commitment.toString(),
   };
 
-  // Update ASP root
-  log("⏳", "Updating ASP root (compliance)...");
-  await fetch(`${ZBASE_API}/api/asp-update`, { method: "POST" });
-  await new Promise(r => setTimeout(r, 3000));
-  log("✅", "ASP root updated");
+  // Get the deposit into the ASP set. /api/asp-update is operator-locked
+  // (ASP_UPDATE_SECRET); the designed path for a depositor is
+  // POST /api/deposits/confirm { txHash } — the deposit tx itself is the
+  // authorization. It screens the depositor, refreshes the ASP root, and
+  // returns 202 "queued" until confirmations land, so poll briefly.
+  log("⏳", "Confirming deposit with the ASP (compliance screening + root update)...");
+  let aspStatus = "queued";
+  for (let attempt = 0; attempt < 20 && aspStatus === "queued"; attempt++) {
+    const confirmRes = await fetch(`${ZBASE_API}/api/deposits/confirm`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ txHash: depositTx }),
+    });
+    const confirmData = await confirmRes.json().catch(() => ({}));
+    aspStatus = String(confirmData.status ?? (confirmRes.ok ? "confirmed" : "error"));
+    if (aspStatus === "queued") {
+      log("⏳", `ASP: ${confirmData.reason ?? "waiting for confirmations"} (${attempt + 1}/20)`);
+      await new Promise(r => setTimeout(r, 4000));
+    } else if (!confirmRes.ok) {
+      console.error("ASP confirm failed:", confirmData);
+      return;
+    }
+  }
+  log("✅", `ASP status: ${aspStatus}`);
+
+  // The facilitator verifies against its root-verified shared indexer, which a cron
+  // (/api/cron/indexer-sync) advances in production. Nothing runs that cron on a
+  // laptop, so this harness — which already holds operator env — triggers the same
+  // sync so the leaf we just inserted is in the cache before verify.
+  await syncIndexer();
 
   // ══════════════════════════════════════════════════════
   // STEP 3: Agent verifies payment via zBase facilitator
@@ -294,6 +352,7 @@ async function main() {
   // STEP 6: Agent pays a second invoice from the returned change note
   // ══════════════════════════════════════════════════════
   console.log("\n--- STEP 6: Agent verifies second payment from nextDeposit ---\n");
+  await syncIndexer();
 
   const verifyRes2 = await fetch(`${ZBASE_API}/api/facilitator/verify`, {
     method: "POST",
